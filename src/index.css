@@ -1,5 +1,17 @@
-* {
+@import "reset.css";
+
+html {
+  overflow-x: hidden;
+  width: 100%;
   box-sizing: border-box;
+
+  font-size: 15px;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
 }
 
 body {
@@ -14,4 +26,220 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* ============================== */
+
+/* обёртка страниц для адаптивности */
+
+.page-wrapper {
+  min-height: 100vh;       /* Высота на весь экран */
+  width: 100vw;            /* Ширина на весь экран */
+  max-width: 100%;/* Максимальная ширина на весь экран */
+  display: flex;           /* Используем flex для адаптивности */
+  flex-direction: column;  /* Дочерние элементы — вертикально */
+  align-items: stretch;    /* Растягивать вложенные элементы */
+  justify-content: stretch;
+  box-sizing: border-box;
+  padding: 0;              /* По умолчанию без внутренних отступов */
+  margin: 0;
+  background: #f5feff;     /* Можно поменять под ваш дизайн */
+}
+
+/* Пример адаптивности для внутренних блоков */
+.page-wrapper > * {
+  flex: 1 1 auto;          /* Позволяет вложенным элементам растягиваться */
+  min-width: 0;
+}
+
+
+/* Блок с картой */
+
+.map-container {
+  position: relative;
+  z-index: 1;
+}
+
+.cover-div {
+  position: absolute;
+  z-index: 2;
+  width: 100%;
+  bottom: 0px;
+  background-color: red;
+}
+
+/* LoginPage */
+
+.login-main {
+  display: flex;
+  flex-direction: row;  /* элементы выстраиваются в строку */
+  justify-content: center; /* можно выровнять по центру, опционально */
+  align-items: stretch;  /* по высоте равняются */
+  min-width: 0;         /* важно для предотвращения overflow */
+  width: 100%;
+}
+
+.loginPage-img,
+.login-form-block {
+  flex: 1 1 50%;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.loginPage-img {
+  max-width: 562px;
+}
+
+.loginPage-img img {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-width: 100%;
+}
+
+/* Окно авторизации */
+
+.login-main {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background: transparent;
+}
+
+.loginPage-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 562px;
+  width: 50vw;
+  min-width: 320px;
+  padding: 0 32px 0 0;
+  box-sizing: border-box;
+}
+
+.loginPage-img img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.login-form-block {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 32px 32px 32px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  /* Тонкая тень, как на макете */
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.06);
+}
+
+.bank-logo {
+  width: 305px;
+  height: 105px;
+  display: flex;
+  align-items: center; /* Центрирует элементы по вертикали */
+  justify-content: center;  /* Центрирует элементы по горизонтали */
+  gap: 10px;
+  margin-bottom: 18px;
+
+  background-color: #FFDD2D;
+  border-radius: 15px;
+}
+
+.bank-logo img {
+  width: 67.13px;
+  height: 60px;
+}
+
+.bank-name {
+  font-size: 1.42rem;
+  font-weight: 700;
+  color: #262c32;
+  letter-spacing: 0.1em;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-title {
+  text-align: center;
+  font-size: 1.22rem;
+  font-weight: 600;
+  color: #262c32;
+  margin-bottom: 14px;
+  margin-top: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+input[type="email"],
+input[type="password"] {
+  padding: 11px 14px;
+  border: 1px solid #e0e3e8;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f8f9fb;
+  transition: border 0.2s;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus {
+  border-color: #FFDD2D;
+  outline: none;
+}
+
+.checkbox-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.96rem;
+}
+
+.login-btn {
+  padding: 13px 0;
+  border-radius: 9px;
+  background: #FFDD2D;
+  color: #262c32;
+  font-size: 1.06rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background 0.14s;
+}
+
+.login-btn:hover,
+.login-btn:focus {
+  background: #c1a621;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 1rem;
+  color: #848b97;
+}
+
+.register-link a, .register-link p {
+  color: #FFDD2D;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 4px;
+  cursor: pointer;
+  display: inline;
 }
