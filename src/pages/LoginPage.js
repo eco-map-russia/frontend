@@ -21,14 +21,20 @@ function LoginPage() {
             <h2 className="form-title">Вход в ваш аккаунт</h2>
             <div className="form-group">
               <label htmlFor="email">Введите свой Email</label>
-              <input type="email" id="email" name="email" required />
+              <input className="form-group__input" type="email" id="email" name="email" required />
             </div>
             <div className="form-group">
               <label htmlFor="password">Введите свой пароль</label>
-              <input type="password" id="password" name="password" required />
+              <input
+                className="form-group__input"
+                type="password"
+                id="password"
+                name="password"
+                required
+              />
             </div>
             <div className="form-group checkbox-group">
-              <input type="checkbox" id="remember" name="remember" />
+              <input className="form-group__input" type="checkbox" id="remember" name="remember" />
               <label htmlFor="remember">Запомнить меня</label>
             </div>
             <button type="submit" className="login-btn">
@@ -36,7 +42,7 @@ function LoginPage() {
             </button>
             <div className="register-link">
               <span>У вас ещё нет аккаунта? </span>
-              <a>Создать аккаунт</a>
+              <a href="/registration">Создать аккаунт</a>
             </div>
           </form>
         </div>
