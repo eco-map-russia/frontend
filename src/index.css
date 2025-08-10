@@ -204,57 +204,117 @@ code {
 
 /* Боковое меню */
 
-.sidebar {
-  position: fixed;         /* поверх карты */
+.sidebar-container{
+  position: fixed;
   right: 23px;
   top: 1em;
-  bottom: 0;
   height: 40em;
-  width: 82px;                /* ширина примерно по макету */
-  background: #fff;        /* тёмно-серый */
-  border-radius: 12px; /* закругление только слева */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   z-index: 10;
-  box-shadow: 0 0 24px rgba(0,0,0,0.12); 
-  transition: width 0.3s;
-  opacity: 0.90;
+}
+
+.sidebar {
+  width: 82px;
+  height: 100%;
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 0 24px rgba(0,0,0,.12);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  overflow: hidden;           /* снова скрываем по обеим осям */
+  transition: width .25s ease;
+  opacity:.9;
+}
+
+/* Состояния */
+.sidebar--collapsed { width: 82px; }
+.sidebar--expanded  { width: 250px; }
+
+/* строго центрируем иконки */
+.sidebar--collapsed .sidebar__btn {
+  justify-content: center;
+  padding: 10px 0;
+  gap: 0;                             /* важно */
+}
+
+/* убираем элементы, создающие "псевдо-ширину" */
+.sidebar--collapsed .sidebar__label,
+.sidebar--collapsed .sidebar__caret {
+  display: none;
 }
 
 .sidebar__top {
-  position: relative;
+  display:flex; align-items:center; justify-content:center;
+  min-height:72px; padding:16px 0;
 }
+
+/* В развернутом состоянии шапка выравнивается влево под текст */
+.sidebar--expanded .sidebar__top{
+  justify-content: flex-start;
+  padding: 16px 16px;
+}
+
+/* Логотип — показываем только в свернутом состоянии */
+.sidebar__logo { position: relative; }
+.sidebar--expanded  .sidebar__logo { opacity: 0; pointer-events: none; width: 0; height: 0; }
+.sidebar--collapsed .sidebar__logo img { display: block; margin: 0 auto; }
+
+.sidebar__logo::after {
+  content: '';
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: -16px;
+  width: 24px; height: 2px; background: #F6F6F6; border-radius: 2px;
+}
+
+/* Имя пользователя — только в развернутом состоянии */
+.sidebar__user {
+  flex: 1;
+  opacity: 0;
+  max-width: 0;
+  transition: opacity .2s, max-width .25s; }
+.sidebar--expanded .sidebar__user { opacity: 1; max-width: 100%; }
+.sidebar__user-name {
+  color: #3C6BE2;                 /* синий из макета */
+  font-size: 16px;
+  
+  white-space: nowrap;
+}
+
+/* Раздельная линия */
+
+.sidebar__divider {
+  height: 1px;
+  background: #EFF1F4;
+  margin: 0 16px;
+}
+
+/* Кнопка-тогглер: наполовину за границами панели */
 
 .sidebar__toggle {
+  position:absolute;
+  right:-12px;               /* половина кнопки снаружи */
+  top:36px;                  /* центр шапки (min-height:72px) */
   transform: translateY(-50%);
-  width: 2em;
-  height: 2em;
-  background: #fff;
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 4px 24px 0 rgba(34, 60, 80, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-
-
-  position: absolute;
-  left: 46px; /* Положение стрелки */
-  top: 35px;
+  width:24px;height:24px;
+  background:#fff;border:none;border-radius:8px;
+  box-shadow:0 4px 24px rgba(34,60,80,.12);
+  display:grid;place-items:center;
+  cursor:pointer;
+  z-index:11;                /* над панелью */
 }
 
-.sidebar__toggle__arrow {
-  display: inline-block;
-  width: 0.5em;
-  height: 0.5em;
-  border-right: 1px solid #000000;  /* Цвет стрелки */
-  border-bottom: 1px solid #000000;
-  transform: rotate(-45deg);         /* Делает ">" вправо */
-  
+/* стрелка */
+.sidebar__toggle__arrow{
+  width: 10px; height: 10px;
+  border-right: 2px solid #0B1220;
+  border-bottom: 2px solid #0B1220;
+  transform: rotate(-45deg);          /* ">" — развернуть */
+  transition: transform .2s ease;
 }
+
+/* поворот стрелки при открытии */
+.sidebar--expanded .sidebar__toggle__arrow { transform: rotate(135deg); } /* "<" — свернуть */
 
 .sidebar__logo {
   margin-top: 1.5em;
@@ -274,7 +334,8 @@ code {
   border-radius: 2px;           /* Для скругления концов */
 }
 
-.sidebar__menu, .sidebar__bottom {
+.sidebar__menu,
+.sidebar__bottom {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -283,20 +344,58 @@ code {
 }
 
 .sidebar__btn {
-  margin-top: 1em;
-  background-color: #fff;
-  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #fff;
   border: none;
+  border-radius: 8px;
+  cursor: pointer;
   
 }
 
 .sidebar__btn:hover {
   cursor: pointer;
+  background: #F7F9FC;
 }
+
+.sidebar__icon { width: 22px; height: 22px; flex: 0 0 22px; }
+
+/* Подпись пункта меню: скрыта в свернутом состоянии */
+.sidebar__label {
+  color: #0B1220;
+  font-size: 15px;
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity .2s, max-width .25s, transform .25s;
+  transform: translateX(-6px);
+}
+.sidebar--expanded .sidebar__label {
+  opacity: 1;
+  max-width: 220px;           /* чтобы текст плавно «въезжал» */
+  transform: translateX(0);
+}
+
+.sidebar__caret { margin-left: auto; opacity: 0; }
+.sidebar--expanded .sidebar__caret { opacity: .6; }
+
+.sidebar__spacer { flex: 1; }
+.sidebar__bottom .sidebar__item--exit { margin-top: 8px; }
 
 .sidebar__btn--exit {
   margin-bottom: 1.5em;
+  color: #E53935;
+  
 }
+
+.sidebar__btn--exit .sidebar__label {
+  color: #E53935; 
+}
+
 
 /* Кнопки зума */
 
