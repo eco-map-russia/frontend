@@ -62,14 +62,6 @@ code {
   z-index: 1;
 }
 
-.cover-div {
-  position: absolute;
-  z-index: 2;
-  width: 100%;
-  bottom: 0px;
-  background-color: red;
-}
-
 /* ============================== */
 
 /* UI-элементы карты */
@@ -165,18 +157,34 @@ code {
   position: absolute;
   top: 170%;
   left: calc(100% + 12px);   /* сразу сбоку от кнопки */
-  transform: translateY(-50%);
-  display: none;              /* скрыто по умолчанию */
-
-  background: #2f3a43;           /* тёмный фон как на макете */
-  border-radius: 14px;           /* скругления */
+  transform: translateY(-50%); /* мы будем переопределять translateY в hidden/visible */
+  background: #2f3a43;           
+  border-radius: 14px;           
   padding: 20px;
-  width: 240px;                  /* ширина близкая к макету */
+  width: 240px;                  
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+
+  /* --- анимация: стартовое скрытое состояние --- */
+  opacity: 0;                            /* невидимо */
+  visibility: hidden;                    /* не интерактивно и не видимо */
+  pointer-events: none;                  /* клики проходят сквозь */
+  transform: translateY(-6px) scale(.99);/* сдвиг вверх и лёгкое уменьшение */
+  transition:
+    opacity 180ms cubic-bezier(.2,.9,.2,1),
+    transform 180ms cubic-bezier(.2,.9,.2,1),
+    box-shadow 180ms ease;
+  will-change: opacity, transform;
 }
 
-/* показываем меню при нажатии кнопки фильтра */
-.map-filter.open .filters-menu { display: block; }
+/* показываем меню при нажатии кнопки — плавно */
+.map-filter.open .filters-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%) translateY(0) scale(1); /* вернём в исходную позицию */
+  /* можно усилить тень при открытии */
+  box-shadow: 0 8px 30px rgba(0,0,0,0.36);
+}
 
 .filters-menu__list {
   list-style: none;
@@ -190,6 +198,8 @@ code {
   font-weight: 400;
   text-align: center;            /* по центру как на макете */
   padding: 8px 0;
+
+  position: relative;
 }
 
 .filters-menu__item:hover {
@@ -199,6 +209,21 @@ code {
 
 .filters-menu__item + .filters-menu__item {
   margin-top: 6px;               /* отступы между пунктами */
+}
+
+/* псевдоэлемент с галочкой */
+.filters-menu__item.selected::after {
+  content: '✓';                 
+  position: absolute;
+  
+  right: 7px;  /* отступ от правого края пункта */
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;              /* размер галочки */
+  line-height: 1;
+  color: #fff;                 
+  font-weight: 700;
+  
 }
 
 
@@ -279,6 +304,10 @@ code {
   font-size: 16px;
   
   white-space: nowrap;
+}
+.sidebar__user-name a {
+  text-decoration: none;
+  color: inherit;                /* наследуем цвет */
 }
 
 /* Раздельная линия */

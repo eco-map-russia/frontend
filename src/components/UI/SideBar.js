@@ -20,7 +20,9 @@ function Sidebar() {
           </div>
           {/* Имя пользователя (видно только в развернутом) */}
           <div className="sidebar__user">
-            <div className="sidebar__user-name">Имя Фамилия</div>
+            <div className="sidebar__user-name">
+              <a href="/login">Имя Фамилия </a>
+            </div>
           </div>
 
           <button

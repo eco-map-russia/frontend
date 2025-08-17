@@ -42,7 +42,7 @@ function LoginPage() {
             </button>
             <div className="register-link">
               <span>У вас ещё нет аккаунта? </span>
-              <a href="/registration">Создать аккаунт</a>
+              <a href="/register">Создать аккаунт</a>
             </div>
           </form>
         </div>

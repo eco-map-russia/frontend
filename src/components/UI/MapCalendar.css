@@ -1,0 +1,89 @@
+/* src/components/UI/MapCalendar.css */
+
+/* Контейнер календаря */
+.map-calendar {
+  position: absolute;
+  bottom: 35px;
+  left: 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  z-index: 1000;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Убираем стандартную рамку react-calendar */
+.react-calendar {
+  border: none;
+  background: transparent;
+}
+
+/* Заголовок месяца */
+.react-calendar__navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.react-calendar__navigation button {
+  background: none;
+  border: none;
+  color: #1e1e1e;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.react-calendar__navigation button:enabled:hover {
+  background: rgba(0, 91, 255, 0.08);
+}
+
+/* Иконки стрелок */
+.react-calendar__navigation__prev2-button,
+.react-calendar__navigation__next2-button {
+  display: none; /* скрываем двойные стрелки */
+}
+
+/* Сетка дней */
+.react-calendar__month-view__weekdays {
+  text-transform: capitalize;
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.react-calendar__month-view__days__day {
+  font-size: 14px;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+/* Hover эффект */
+.react-calendar__tile:enabled:hover {
+  background: rgba(0, 91, 255, 0.08);
+  cursor: pointer;
+}
+
+/* Сегодняшний день */
+.react-calendar__tile--now {
+  background: rgba(0, 91, 255, 0.08);
+  color: #005bff;
+  font-weight: 600;
+}
+
+/* Выбранный день */
+.react-calendar__tile--active {
+  background: #005bff !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+/* Дни из другого месяца */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #bbb;
+}
