@@ -5,6 +5,17 @@ import ecoIllustration from '../assets/images/eco-illustration.png';
 import tBankLogo from '../assets/images/T-bank-logo.svg';
 
 function LoginPage() {
+  const formSubmitHandler = (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const data = {
+      email: formData.get('email'),
+      password: formData.get('password'),
+    };
+
+    console.log(data); // { email: "...", password: "..." }
+  };
   return (
     <PageWrapper>
       <main className="login-main">
@@ -17,7 +28,7 @@ function LoginPage() {
             <span className="bank-name">БАНК</span>
           </div>
 
-          <form className="login-form">
+          <form className="login-form" onSubmit={formSubmitHandler}>
             <h2 className="form-title">Вход в ваш аккаунт</h2>
             <div className="form-group">
               <label htmlFor="email">Введите свой Email</label>
@@ -32,10 +43,6 @@ function LoginPage() {
                 name="password"
                 required
               />
-            </div>
-            <div className="form-group checkbox-group">
-              <input className="form-group__input" type="checkbox" id="remember" name="remember" />
-              <label htmlFor="remember">Запомнить меня</label>
             </div>
             <button type="submit" className="login-btn">
               Войти
