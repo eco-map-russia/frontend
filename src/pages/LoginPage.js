@@ -1,3 +1,6 @@
+import { useDispatch } from 'react-redux';
+import { userAuthActions } from '../store/user-auth-slice';
+
 import PageWrapper from '../layout/PageWrapper';
 import Footer from '../components/Footer';
 
@@ -5,6 +8,8 @@ import ecoIllustration from '../assets/images/eco-illustration.png';
 import tBankLogo from '../assets/images/T-bank-logo.svg';
 
 function LoginPage() {
+  const dispatch = useDispatch();
+
   const formSubmitHandler = (event) => {
     event.preventDefault();
 
@@ -15,6 +20,11 @@ function LoginPage() {
     };
 
     console.log(data); // { email: "...", password: "..." }
+
+    dispatch(userAuthActions.submitLogin(data));
+
+    // очистить форму
+    event.currentTarget.reset();
   };
   return (
     <PageWrapper>
