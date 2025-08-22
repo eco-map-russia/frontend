@@ -1,5 +1,5 @@
 import { useDispatch } from 'react-redux';
-import { userAuthActions } from '../store/user-auth-slice';
+import { login } from '../store/user-auth-slice';
 
 import PageWrapper from '../layout/PageWrapper';
 import Footer from '../components/Footer';
@@ -13,15 +13,13 @@ function LoginPage() {
   const formSubmitHandler = (event) => {
     event.preventDefault();
 
-    const formData = new FormData(event.target);
+    const formData = new FormData(event.currentTarget);
     const data = {
       email: formData.get('email'),
       password: formData.get('password'),
     };
 
-    console.log(data); // { email: "...", password: "..." }
-
-    dispatch(userAuthActions.submitLogin(data));
+    dispatch(login(data)); // ← уходит POST /api/v1/auth/login
 
     // очистить форму
     event.currentTarget.reset();

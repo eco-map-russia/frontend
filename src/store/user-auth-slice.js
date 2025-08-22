@@ -1,32 +1,70 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { http, setAuthToken } from '../api/http';
 
 const initialState = {
-  count: 0,
-  credentials: null, // последние отправленные данные формы
   isLoggedIn: false,
+  token: null,
+  credentials: null, // последние отправленные данные формы
+  status: 'idle', // idle | loading | succeeded | failed
+  error: null,
 };
 
-const userAuthSliceslice = createSlice({
+// POST /api/v1/auth/login  -> { token: "..." }
+export const login = createAsyncThunk(
+  'auth/login',
+  async ({ email, password }, { rejectWithValue }) => {
+    try {
+      const { data } = await http.post('/auth/login', { email, password });
+      // Ожидаем data = { token: '...' }
+      return data;
+    } catch (err) {
+      const message = err.response?.data?.message || 'Ошибка авторизации';
+      return rejectWithValue(message);
+    }
+  },
+);
+
+const userAuthSlice = createSlice({
   name: 'userAuth',
   initialState,
   reducers: {
-    submitLogin: (state, action) => {
-      // action.payload ожидаем вида { email, password }
-      state.credentials = action.payload;
-      state.isLoggedIn = true;
-
-      // по твоему ТЗ — лог прямо из слайса
-      console.log('Данные логина из слайса:', action.payload);
-      console.log(state.credentials);
+    logout(state) {
+      state.isLoggedIn = false;
+      state.token = null;
+      state.credentials = null;
+      setAuthToken(null);
+      localStorage.removeItem('auth_token');
     },
-    increment: (state) => {
-      state.count += 1;
+    // гидратация при старте приложения
+    hydrateFromStorage(state, action) {
+      const token = action.payload;
+      if (token) {
+        state.token = token;
+        state.isLoggedIn = true;
+        setAuthToken(token);
+      }
     },
-    decrement: (state) => {
-      state.count -= 1;
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(login.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(login.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.isLoggedIn = true;
+        state.token = action.payload.token;
+        setAuthToken(action.payload.token); // ← далее все запросы пойдут с Bearer
+        localStorage.setItem('auth_token', action.payload.token); // ← чтобы не терять при перезагрузке
+        console.log('Токен получен:', action.payload.token); // по желанию: лог
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload || 'Ошибка авторизации';
+      });
   },
 });
 
-export const userAuthActions = userAuthSliceslice.actions;
-export default userAuthSliceslice.reducer;
+export const { logout, hydrateFromStorage } = userAuthSlice.actions;
+export default userAuthSlice.reducer;
