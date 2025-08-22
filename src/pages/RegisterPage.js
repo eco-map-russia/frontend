@@ -66,7 +66,7 @@ function RegisterPage() {
               <a href="/login">Войти</a>
             </div>
             <button type="submit" className="login-btn">
-              Войти
+              Зарегистрироваться
             </button>
           </form>
         </div>

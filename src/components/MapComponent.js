@@ -35,12 +35,33 @@ function MapComponent() {
   };
   const zoomToUserHandler = () => {
     const map = mapRef.current;
-    if (!map) return;
-    // Здесь можно использовать Geolocation API для получения текущих координат пользователя
-    navigator.geolocation.getCurrentPosition((position) => {
-      const coords = [position.coords.latitude, position.coords.longitude];
-      map.setCenter(coords, 15, { duration: 300 }); // центрируем карту на текущем местоположении
-    });
+    if (!map || !('geolocation' in navigator)) return;
+
+    const goTo = (lat, lon) => {
+      const target = [lat, lon];
+      // Мягкое перемещение, затем — зум
+      map.panTo(target, { duration: 500 }).then(() => {
+        const z = map.getZoom ? map.getZoom() : 9;
+        map.setZoom(Math.max(z, 14), { duration: 300 });
+      });
+    };
+
+    const opts = {
+      enableHighAccuracy: true, // просим GPS/датчики
+      timeout: 8000, // ждём до 8с
+      maximumAge: 0, // не берем старый кеш
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        goTo(coords.latitude, coords.longitude); // порядок lat, lon
+      },
+      (err) => {
+        console.warn('Geolocation error:', err);
+        // Fallback: оставляем текущий центр или покажите подсказку пользователю
+      },
+      opts,
+    );
   };
 
   return (
@@ -50,6 +71,15 @@ function MapComponent() {
           defaultState={{ center: [55.75, 37.57], zoom: 9 }}
           width="100%"
           height="100svh"
+          options={{
+            minZoom: 3, // дальше отдалять нельзя
+            maxZoom: 18, // дальше приближать нельзя
+            avoidFractionalZoom: true, // (по умолчанию на десктопе) без дробных зумов
+            restrictMapArea: [
+              [-85.0, -179.99],
+              [85.0, 179.99],
+            ],
+          }}
           instanceRef={mapRef}
           onClick={(e) => mapClickHandler(e)}
         />
