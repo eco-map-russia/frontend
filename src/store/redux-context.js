@@ -1,9 +1,12 @@
-// src/store/index.js
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer, { hydrateFromStorage } from './user-auth-slice';
+import regionsReducer from './regions-slice';
 
 const store = configureStore({
-  reducer: { auth: authReducer },
+  reducer: {
+    auth: authReducer,
+    regions: regionsReducer, // ← подключили ветку regions
+  },
 });
 
 // Гидратация при запуске приложения

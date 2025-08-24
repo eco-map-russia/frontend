@@ -1,6 +1,9 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { YMaps, Map } from '@pbe/react-yandex-maps';
 import config from '../config/config.json';
+
+import { fetchRegions } from '../store/regions-slice'; // импорт thunk
 
 import MapSearchBar from './UI/MapSearchBar';
 import MapFilter from './UI/MapFilter';
@@ -9,7 +12,29 @@ import NavigateButtons from './UI/NavigateButtons';
 import MapCalendar from './UI/MapCalendar';
 
 function MapComponent() {
+  const dispatch = useDispatch();
+  const { items: regions, status, error } = useSelector((s) => s.regions);
+  const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
+
   const mapRef = useRef(null);
+
+  // 1) грузим регионы один раз при заходе (и когда пользователь авторизовался)
+  useEffect(() => {
+    if (isLoggedIn && status === 'idle') {
+      dispatch(fetchRegions());
+    }
+  }, [dispatch, isLoggedIn, status]);
+
+  // 2) просто выведем массив в консоль, когда он загрузится
+  useEffect(() => {
+    if (status === 'succeeded') {
+      console.log('Регионы получены:', regions);
+      // если в слайсе парсишь geoJson -> regions[i].geometry будет уже объектом
+    }
+    if (status === 'failed') {
+      console.warn('Ошибка загрузки регионов:', error);
+    }
+  }, [status, regions, error]);
 
   const mapClickHandler = (e) => {
     const coords = e.get('coords');
