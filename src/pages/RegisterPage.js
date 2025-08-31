@@ -1,5 +1,5 @@
 import { useDispatch } from 'react-redux';
-import { submitRegister } from '../store/user-register-slice';
+import { register } from '../store/user-register-slice';
 
 import PageWrapper from '../layout/PageWrapper';
 import Footer from '../components/Footer';
@@ -22,7 +22,7 @@ function RegisterPage() {
 
     console.log('Регистрационные данные (в компоненте):', data);
 
-    dispatch(submitRegister(data)); // ← уходит в слайс
+    dispatch(register(data)); // ← уходит в слайс
 
     // очистить форму
     event.currentTarget.reset();

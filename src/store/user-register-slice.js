@@ -1,26 +1,54 @@
-// src/store/user-auth-slice.js
-import { createSlice } from '@reduxjs/toolkit';
+// src/store/user-register-slice.js
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { http } from '../api/http';
 
 const initialState = {
-  count: 0,
+  status: 'idle', // idle | loading | succeeded | failed
+  error: null, // текст ошибки
+  credentials: null, // последние отправленные данные формы
+  response: null, // ответ сервера
 };
+
+// POST /api/v1/auth/register
+export const register = createAsyncThunk('auth/register', async (formData, { rejectWithValue }) => {
+  try {
+    const { data } = await http.post('/auth/register', formData);
+    return data;
+  } catch (err) {
+    const message =
+      err.response?.data?.message || err.response?.data?.error || 'Ошибка регистрации';
+    return rejectWithValue(message);
+  }
+});
 
 const userRegisterSlice = createSlice({
   name: 'userRegister',
   initialState,
   reducers: {
-    submitRegister: (state, action) => {
-      // по твоему ТЗ — лог прямо из слайса
-      console.log('Данные Регистрации из слайса:', action.payload);
+    reset(state) {
+      state.status = 'idle';
+      state.error = null;
+      state.response = null;
     },
-    increment: (state) => {
-      state.count += 1;
-    },
-    decrement: (state) => {
-      state.count -= 1;
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(register.pending, (state, action) => {
+        state.status = 'loading';
+        state.error = null;
+        state.credentials = action.meta.arg; // запомним, что отправляли
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.response = action.payload;
+        console.log('Регистрация успешна:', action.payload);
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload || 'Ошибка регистрации';
+      });
   },
 });
 
-export const { submitRegister } = userRegisterSlice.actions;
+export const { reset } = userRegisterSlice.actions;
 export default userRegisterSlice.reducer;
