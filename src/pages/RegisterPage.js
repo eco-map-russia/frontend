@@ -1,9 +1,33 @@
+import { useDispatch } from 'react-redux';
+import { submitRegister } from '../store/user-register-slice';
+
 import PageWrapper from '../layout/PageWrapper';
 import Footer from '../components/Footer';
 
 import tBankLogo from '../assets/images/T-bank-logo.svg';
 
 function RegisterPage() {
+  const dispatch = useDispatch();
+  const formSubmitHandler = (event) => {
+    event.preventDefault();
+
+    const registerformData = new FormData(event.currentTarget);
+    const data = {
+      email: registerformData.get('email'),
+      password: registerformData.get('password'),
+      firstName: registerformData.get('firstName'),
+      lastName: registerformData.get('lastName'),
+      phone: registerformData.get('phone'),
+    };
+
+    console.log('Регистрационные данные (в компоненте):', data);
+
+    dispatch(submitRegister(data)); // ← уходит в слайс
+
+    // очистить форму
+    event.currentTarget.reset();
+  };
+
   return (
     <PageWrapper>
       <main className="login-main">
@@ -13,7 +37,7 @@ function RegisterPage() {
             <span className="bank-name">БАНК</span>
           </div>
 
-          <form className="login-form">
+          <form className="login-form" onSubmit={formSubmitHandler}>
             <div className="form-group">
               <label htmlFor="firstName">Имя</label>
               <input
