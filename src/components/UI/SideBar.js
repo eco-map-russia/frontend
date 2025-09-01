@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchProfile } from '../../store/user-profile-slice';
 
 import tBankLogo from '../../assets/images/T-bank-sidebar-logo.svg';
 import analyticsIcon from '../../assets/images/sidebarIcons/Analytics_1.svg';
@@ -10,6 +12,17 @@ import logOutIcon from '../../assets/images/sidebarIcons/Log-out_6.svg';
 
 function Sidebar() {
   const [expanded, setExpanded] = useState(false);
+  const dispatch = useDispatch();
+  const { user, status } = useSelector((s) => s.profile);
+
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchProfile());
+    }
+  }, [status, dispatch]);
+
+  const fullName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : '';
+
   return (
     <div className={`sidebar-container ${expanded ? 'is-expanded' : ''}`}>
       <aside className={`sidebar ${expanded ? 'sidebar--expanded' : 'sidebar--collapsed'}`}>
@@ -21,7 +34,7 @@ function Sidebar() {
           {/* Имя пользователя (видно только в развернутом) */}
           <div className="sidebar__user">
             <div className="sidebar__user-name">
-              <a href="/login">Имя Фамилия </a>
+              <a href="/login">{status === 'loading' ? '' : fullName || '—'}</a>
             </div>
           </div>
 
