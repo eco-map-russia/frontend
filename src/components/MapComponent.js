@@ -18,7 +18,6 @@ function MapComponent() {
   const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
 
   const mapRef = useRef(null);
-  const omRef = useRef(null);
   const polylabelerRef = useRef(null);
 
   useEffect(() => {
@@ -45,33 +44,18 @@ function MapComponent() {
   }, []);
 
   useEffect(() => {
-    if (!mapReady || !window.ymaps || omRef.current) return;
+    if (!mapReady || !window.ymaps) return;
 
     (async () => {
       const ymaps = window.ymaps;
       await ymaps.ready(['polylabel.create', 'util.calculateArea']);
       const map = mapRef.current;
 
-      // ObjectManager
-      const om = new ymaps.ObjectManager({
-        clusterize: false,
-        geoObjectOpenBalloonOnClick: false,
-      });
-      om.objects.options.set({
-        fillColor: '#2D7DB8',
-        fillOpacity: 0.6,
-        strokeColor: '#FFFFFF',
-        strokeOpacity: 0.9,
-        strokeWidth: 1,
-        zIndex: 100,
-      });
-      map.geoObjects.add(om);
-      omRef.current = om;
+      // Берём конструктор лейблера (как в README)
+      // Можно и так: const [Polylabel] = await ymaps.modules.require(['polylabel.create']);
+      const PolylabelCtor = ymaps.polylabel.create;
 
-      // Polylabeler
-      const [createPolylabel] = await ymaps.modules.require(['polylabel.create']);
-      polylabelerRef.current = createPolylabel(map, om);
-
+      // --- helper: превращаем borders.* в FeatureCollection с Polygon-ами
       const buildFC = (geojson) => {
         const feats = (geojson?.features ?? []).flatMap((f, idx) => {
           const name =
@@ -84,7 +68,6 @@ function MapComponent() {
             id: `${idx}-${part}`,
             geometry: { type: 'Polygon', coordinates: coords },
             properties: { name },
-            options: { labelDefaults: 'light', labelLayout: '{{properties.name}}' },
           });
           if (f.geometry?.type === 'Polygon') return [make(f.geometry.coordinates)];
           if (f.geometry?.type === 'MultiPolygon')
@@ -94,63 +77,72 @@ function MapComponent() {
         return { type: 'FeatureCollection', features: feats };
       };
 
+      // --- главная функция добавления + подписи
       const addFCAndFit = (fc) => {
-        om.removeAll();
-        om.add(fc);
-        const bounds = ymaps.geoQuery(fc).getBounds();
+        // 1) Делаем коллекцию из FC и сразу рисуем на карту
+        const q = ymaps.geoQuery(fc).addToMap(map);
+
+        // 2) Стилизуем только полигоны и задаём обязательный labelLayout
+        const polygons = q.search('geometry.type="Polygon"');
+        polygons.setOptions({
+          fillColor: '#2D7DB8',
+          fillOpacity: 0.6,
+          strokeColor: '#FFFFFF',
+          strokeOpacity: 0.9,
+          strokeWidth: 1,
+          labelDefaults: 'light',
+          labelLayout: '{{properties.name}}', // <-- ОБЯЗАТЕЛЬНО
+        });
+
+        // 3) Подгоним карту под все регионы
+        const bounds = q.getBounds();
         if (bounds) map.setBounds(bounds, { checkZoomRange: true });
-        console.log(`🟦 Добавлено полигонов: ${fc.features.length}`);
+
+        // 4) Стартуем polylabeler ПОСЛЕ того, как геообъекты и опции уже есть
+        if (polylabelerRef.current?.destroy) polylabelerRef.current.destroy();
+        polylabelerRef.current = new PolylabelCtor(map, q);
+
+        console.log(`🟦 Полигонов добавлено: ${polygons.getLength?.() ?? 'n/a'}`);
       };
 
       try {
-        // основной путь: границы через borders.load
+        // основной источник — границы РФ
         const borders = await ymaps.borders.load('RU', { lang: 'ru', quality: 2 });
-        if (borders?.features) addFCAndFit(buildFC(borders));
-        else if (borders?.geoObjects) {
-          map.geoObjects.add(borders.geoObjects);
-          borders.geoObjects.options.set({
+        if (borders?.features) {
+          addFCAndFit(buildFC(borders));
+        } else if (borders?.geoObjects) {
+          // Если пришла коллекция, работаем прямо с ней
+          const coll = borders.geoObjects;
+          map.geoObjects.add(coll);
+          ymaps.geoQuery(coll).search('geometry.type="Polygon"').setOptions({
             fillColor: '#2D7DB8',
             fillOpacity: 0.6,
             strokeColor: '#FFFFFF',
             strokeOpacity: 0.9,
             strokeWidth: 1,
+            labelDefaults: 'light',
+            labelLayout: '{{properties.name}}',
           });
-          polylabelerRef.current = createPolylabel(map, borders.geoObjects);
-          const bounds = borders.geoObjects.getBounds?.();
+          if (polylabelerRef.current?.destroy) polylabelerRef.current.destroy();
+          polylabelerRef.current = new PolylabelCtor(map, coll);
+          const bounds = coll.getBounds?.();
           if (bounds) map.setBounds(bounds, { checkZoomRange: true });
+        } else {
+          console.warn('borders.load: неожиданный формат', borders);
         }
       } catch (e) {
-        // запасной: попробовать regions.load, потом локальный файл
+        console.warn('borders.load не удалось, пробуем локальный файл', e);
         try {
-          if (ymaps.regions?.load) {
-            const res = await ymaps.regions.load('RU', { lang: 'ru', quality: 2 });
-            if (res?.features) addFCAndFit(buildFC(res));
-            else if (res?.geoObjects) {
-              map.geoObjects.add(res.geoObjects);
-              res.geoObjects.options.set({
-                fillColor: '#2D7DB8',
-                fillOpacity: 0.6,
-                strokeColor: '#FFFFFF',
-                strokeOpacity: 0.9,
-                strokeWidth: 1,
-              });
-              polylabelerRef.current = createPolylabel(map, res.geoObjects);
-            }
-          } else {
-            const r = await fetch(process.env.PUBLIC_URL + '/geo/ru_adm1.json');
-            addFCAndFit(buildFC(await r.json()));
-          }
+          const r = await fetch(process.env.PUBLIC_URL + '/geo/ru_adm1.json');
+          addFCAndFit(buildFC(await r.json()));
         } catch (err) {
           console.error('Не удалось получить границы РФ', err);
         }
       }
     })();
 
-    // cleanup
     return () => {
-      const map = mapRef.current;
-      if (map && omRef.current) map.geoObjects.remove(omRef.current);
-      omRef.current = null;
+      if (polylabelerRef.current?.destroy) polylabelerRef.current.destroy();
       polylabelerRef.current = null;
     };
   }, [mapReady]);
