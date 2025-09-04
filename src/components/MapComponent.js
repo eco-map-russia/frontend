@@ -15,10 +15,13 @@ function MapComponent() {
   const [mapReady, setMapReady] = useState(false);
   const dispatch = useDispatch();
   const { items: regions, status, error } = useSelector((s) => s.regions);
+  const activeFilter = useSelector((s) => s.filter.value);
   const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
 
   const mapRef = useRef(null);
   const polylabelerRef = useRef(null);
+
+  /* ========================= Отрисовка Регионов России ========================= */
 
   useEffect(() => {
     const check = async () => {
@@ -171,10 +174,15 @@ function MapComponent() {
 
   const mapClickHandler = (e) => {
     const coords = e.get('coords');
-    console.log('Map clicked at coordinates:', coords);
+    console.log('Координаты клика:', coords);
+    if (activeFilter) {
+      console.log('Активный фильтр:', { id: activeFilter.id, label: activeFilter.label });
+    } else {
+      console.log('Активный фильтр: нет (null)');
+    }
   };
 
-  const handleDateChange = (date) => {
+  const dateChangeHandler = (date) => {
     console.log('Выбрана дата:', date);
     // здесь можно подгрузить данные карты за выбранный день
   };
@@ -252,7 +260,7 @@ function MapComponent() {
         onZoomIn={zoomInHandler}
         onZoomOut={zoomOutHandler}
       />
-      <MapCalendar onDateChange={handleDateChange} />
+      <MapCalendar onDateChange={dateChangeHandler} />
     </YMaps>
   );
 }

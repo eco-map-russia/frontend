@@ -3,6 +3,7 @@ import authReducer, { hydrateFromStorage } from './user-auth-slice';
 import registerReducer from './user-register-slice';
 import profileReducer from './user-profile-slice';
 import regionsReducer from './regions-slice';
+import filterReducer from './filter-slice';
 
 const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ const store = configureStore({
     register: registerReducer,
     profile: profileReducer,
     regions: regionsReducer, // ← подключили ветку regions
+    filter: filterReducer,
   },
 });
 

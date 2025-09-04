@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { setFilter, selectActiveFilter } from '../../store/filter-slice';
 import FilterMenuOption from './FilterMenuOption';
 
 const filters = [
@@ -10,13 +12,17 @@ const filters = [
 ];
 
 function MapFilterMenu() {
-  const [selectedId, setSelectedId] = useState(null);
+  const dispatch = useDispatch();
+  const active = useSelector(selectActiveFilter); // null или { id, label }
 
-  const filterToggleHandler = useCallback((id, label) => {
-    console.log(`Выбран фильтр "${label}" с ID: ${id}`);
-    setSelectedId((prev) => (prev === id ? null : id));
-    // тут можно диспатчить Redux, менять локальный state и т.п.
-  }, []); // если внутри будет использоваться state/props — добавь их в зависимости
+  const filterToggleHandler = useCallback(
+    (id, label) => {
+      const isSame = active?.id === id;
+      dispatch(setFilter(isSame ? null : { id, label }));
+      // при желании — тут же можно триггерить загрузку/перерисовку карты
+    },
+    [dispatch, active],
+  );
 
   return (
     <div className="filters-menu">
@@ -26,7 +32,7 @@ function MapFilterMenu() {
             key={el.filterId}
             filterId={el.filterId}
             label={el.label}
-            isSelected={selectedId === el.filterId}
+            isSelected={active?.id === el.filterId}
             onToggle={filterToggleHandler}
           />
         ))}
