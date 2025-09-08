@@ -22,24 +22,53 @@ const FILTER_TYPE_BY_ID = {
   4: 'cleanup-events',
 };
 
-function adaptAirPoints(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((p) => ({
-    id: p.pointId,
-    coords: [p.CoordinatesResponseDto.lon, p.CoordinatesResponseDto.lat], // [lon, lat]
-    props: {
-      hintContent: `${p.pointName} • AQI: ${p.europeanAqi}`,
-      balloonContent: `
-        <div style="font-size:13px;">
-          <b>${p.pointName}</b><br/>
-          PM2.5: ${p.pm25} • PM10: ${p.pm10}<br/>
-          NO₂: ${p.nitrogenDioxide} • SO₂: ${p.sulphurDioxide}<br/>
-          O₃: ${p.ozone} • CO₂: ${p.carbonDioxide}
-        </div>
-      `,
-    },
-  }));
+function makePointsAdaptor({ getId, getName, getLonLat, toProps }) {
+  return function adapt(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((p) => {
+      const [lon, lat] = getLonLat(p);
+      return {
+        id: getId(p),
+        coords: [lon, lat], // coordorder: 'longlat' → [lon, lat]
+        props: toProps(p, { name: getName(p) }),
+      };
+    });
+  };
 }
+
+const adaptAirPoints = makePointsAdaptor({
+  getId: (p) => p.pointId,
+  getName: (p) => p.pointName ?? 'Точка',
+  getLonLat: (p) => [p.CoordinatesResponseDto.lon, p.CoordinatesResponseDto.lat],
+  toProps: (p) => ({
+    hintContent: `${p.pointName} • AQI: ${p.europeanAqi}`,
+    balloonContent: `
+      <div style="font-size:13px;">
+        <b>${p.pointName}</b><br/>
+        PM2.5: ${p.pm25} • PM10: ${p.pm10}<br/>
+        NO₂: ${p.nitrogenDioxide} • SO₂: ${p.sulphurDioxide}<br/>
+        O₃: ${p.ozone} • CO₂: ${p.carbonDioxide}
+      </div>
+    `,
+  }),
+});
+
+// INSERT ↓↓↓ новый адаптер для радиации
+const adaptRadiationPoints = makePointsAdaptor({
+  getId: (p) => p.pointId,
+  getName: (p) => p.pointName ?? 'Точка',
+  // Внимание: в radiation — coordinatesResponseDto (нижний регистр)
+  getLonLat: (p) => [p.coordinatesResponseDto.lon, p.coordinatesResponseDto.lat],
+  toProps: (p) => ({
+    hintContent: `${p.pointName} • β: ${p.betaFallout}`,
+    balloonContent: `
+      <div style="font-size:13px;">
+        <b>${p.pointName}</b><br/>
+        Бета-выпадение: ${p.betaFallout}
+      </div>
+    `,
+  }),
+});
 
 // Плейсхолдеры для будущих типов (если будешь использовать позже)
 const adaptors = {
@@ -55,7 +84,7 @@ const adaptors = {
 // ✅ Подкорректированный meta: для air используем adaptAirPoints
 const LAYER_META = {
   air: { mode: 'points', adapt: adaptAirPoints }, // <— ВАЖНО
-  radiation: { mode: 'points', adapt: adaptors.points },
+  radiation: { mode: 'points', adapt: adaptRadiationPoints },
   water: { mode: 'heatmap', adapt: adaptors.heatmap },
   soil: { mode: 'heatmap', adapt: adaptors.heatmap },
   'cleanup-events': { mode: 'points', adapt: adaptors.points },
@@ -75,7 +104,7 @@ function toFeatureCollection(points) {
 
 function MapComponent() {
   const [mapReady, setMapReady] = useState(false);
-  const [airFC, setAirFC] = useState(null);
+  const [pointsFC, setPointsFC] = useState(null);
   const dispatch = useDispatch();
   const { items: regions, status, error } = useSelector((s) => s.regions);
   const activeFilter = useSelector(selectActiveFilter);
@@ -251,27 +280,24 @@ function MapComponent() {
   //   }
   // }, [activeFilter]);
 
-  // + эффект: при выборе фильтра — тянем данные и логируем
   useEffect(() => {
-    // если фильтра нет или не залогинены — очищаем слой
     if (!activeFilter || !isLoggedIn) {
-      setAirFC(null);
+      setPointsFC(null);
       return;
     }
 
     const type = FILTER_TYPE_BY_ID[activeFilter.id];
     const meta = LAYER_META[type];
 
-    // нет меты — очищаем слой
     if (!type || !meta) {
       console.warn('Нет сопоставления id→type или меты для фильтра:', activeFilter);
-      setAirFC(null);
+      setPointsFC(null);
       return;
     }
 
-    // рисуем сейчас только air; на других фильтрах очищаем точки
-    if (type !== 'air') {
-      setAirFC(null);
+    // Если текущий слой НЕ точечный — очищаем точки и выходим
+    if (meta.mode !== 'points') {
+      setPointsFC(null);
       return;
     }
 
@@ -286,16 +312,15 @@ function MapComponent() {
 
         const normalized = meta.adapt ? meta.adapt(raw) : raw;
 
-        // Отладка — по желанию:
-        console.log('[layer] RAW:', raw);
+        // (отладка по желанию)
         console.log('[layer] NORMALIZED count:', Array.isArray(normalized) ? normalized.length : 0);
 
-        // Кладём в стейт в формате для ObjectManager
-        setAirFC(toFeatureCollection(normalized));
+        // Кладём в общий стейт для ObjectManager
+        setPointsFC(toFeatureCollection(normalized));
       } catch (err) {
         if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
         console.error('Ошибка загрузки слоя:', err?.response?.data || err.message);
-        setAirFC(null);
+        setPointsFC(null);
       }
     })();
 
@@ -303,7 +328,8 @@ function MapComponent() {
   }, [activeFilter, isLoggedIn]);
 
   useEffect(() => {
-    if (!omRef.current) return;
+    const om = omRef.current;
+    if (!om) return;
 
     const onObjectClick = (e) => {
       const objectId = e.get('objectId');
@@ -313,8 +339,10 @@ function MapComponent() {
     };
 
     omRef.current.objects.events.add('click', onObjectClick);
-    return () => omRef.current?.objects.events.remove('click', onObjectClick);
-  }, [omRef.current]);
+    return () => {
+      om.objects.events.remove('click', onObjectClick);
+    };
+  }, [pointsFC]);
 
   /* ========================= Обработчики событий ========================= */
 
@@ -398,10 +426,10 @@ function MapComponent() {
           onClick={(e) => mapClickHandler(e)}
         >
           {/* INSERT ↓↓↓ ObjectManager для точек воздуха */}
-          {airFC && (
+          {pointsFC && (
             <ObjectManager
               instanceRef={omRef}
-              features={airFC}
+              features={pointsFC}
               options={{
                 clusterize: true,
                 gridSize: 64,
