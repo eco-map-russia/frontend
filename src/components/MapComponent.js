@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { YMaps, Map } from '@pbe/react-yandex-maps';
+import { ObjectManager } from '@pbe/react-yandex-maps';
 import config from '../config/config.json';
 
+import { http } from '../api/http';
 import { fetchRegions } from '../store/regions-slice'; // импорт thunk
 import { selectActiveFilter } from '../store/filter-slice';
 
@@ -12,8 +14,68 @@ import SideBar from './UI/SideBar';
 import NavigateButtons from './UI/NavigateButtons';
 import MapCalendar from './UI/MapCalendar';
 
+const FILTER_TYPE_BY_ID = {
+  0: 'air',
+  1: 'radiation',
+  2: 'water',
+  3: 'soil',
+  4: 'cleanup-events',
+};
+
+function adaptAirPoints(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((p) => ({
+    id: p.pointId,
+    coords: [p.CoordinatesResponseDto.lon, p.CoordinatesResponseDto.lat], // [lon, lat]
+    props: {
+      hintContent: `${p.pointName} • AQI: ${p.europeanAqi}`,
+      balloonContent: `
+        <div style="font-size:13px;">
+          <b>${p.pointName}</b><br/>
+          PM2.5: ${p.pm25} • PM10: ${p.pm10}<br/>
+          NO₂: ${p.nitrogenDioxide} • SO₂: ${p.sulphurDioxide}<br/>
+          O₃: ${p.ozone} • CO₂: ${p.carbonDioxide}
+        </div>
+      `,
+    },
+  }));
+}
+
+// Плейсхолдеры для будущих типов (если будешь использовать позже)
+const adaptors = {
+  points: (raw) =>
+    (Array.isArray(raw) ? raw : []).map((p) => ({
+      id: p.id ?? `${p.lon},${p.lat}`,
+      coords: [p.lon, p.lat],
+      props: { name: p.name ?? '', description: p.description ?? '' },
+    })),
+  heatmap: (raw) => (Array.isArray(raw) ? raw : []).map((p) => [p.lon, p.lat, p.weight ?? 1]),
+};
+
+// ✅ Подкорректированный meta: для air используем adaptAirPoints
+const LAYER_META = {
+  air: { mode: 'points', adapt: adaptAirPoints }, // <— ВАЖНО
+  radiation: { mode: 'points', adapt: adaptors.points },
+  water: { mode: 'heatmap', adapt: adaptors.heatmap },
+  soil: { mode: 'heatmap', adapt: adaptors.heatmap },
+  'cleanup-events': { mode: 'points', adapt: adaptors.points },
+};
+
+function toFeatureCollection(points) {
+  return {
+    type: 'FeatureCollection',
+    features: points.map((p) => ({
+      type: 'Feature',
+      id: p.id,
+      geometry: { type: 'Point', coordinates: p.coords }, // [lon, lat]
+      properties: p.props,
+    })),
+  };
+}
+
 function MapComponent() {
   const [mapReady, setMapReady] = useState(false);
+  const [airFC, setAirFC] = useState(null);
   const dispatch = useDispatch();
   const { items: regions, status, error } = useSelector((s) => s.regions);
   const activeFilter = useSelector(selectActiveFilter);
@@ -21,7 +83,8 @@ function MapComponent() {
 
   const mapRef = useRef(null);
   const polylabelerRef = useRef(null);
-  const didMountRef = useRef(false); // Чтобы не сработал useEffect при первом рендере
+  // const didMountRef = useRef(false); // Чтобы не сработал useEffect при первом рендере
+  const omRef = useRef(null); // ObjectManager для точек
 
   /* ========================= Отрисовка Регионов России ========================= */
 
@@ -174,19 +237,84 @@ function MapComponent() {
 
   /* ========================= Выбранный фильтр ========================= */
   // Логируем изменение фильтра именно в MapComponent
+  // useEffect(() => {
+  //   if (!didMountRef.current) {
+  //     didMountRef.current = true;
+  //     return;
+  //   }
+  //   if (activeFilter) {
+  //     console.log(`Активный фильтр: ${activeFilter.label} (id=${activeFilter.id})`);
+  //     // здесь же можно инициировать фильтрацию слоёв карты/догрузку данных
+  //   } else {
+  //     console.log('Фильтр снят');
+  //     // здесь можно вернуть слои к дефолтному состоянию
+  //   }
+  // }, [activeFilter]);
+
+  // + эффект: при выборе фильтра — тянем данные и логируем
   useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
+    // если фильтра нет или не залогинены — очищаем слой
+    if (!activeFilter || !isLoggedIn) {
+      setAirFC(null);
       return;
     }
-    if (activeFilter) {
-      console.log(`Активный фильтр: ${activeFilter.label} (id=${activeFilter.id})`);
-      // здесь же можно инициировать фильтрацию слоёв карты/догрузку данных
-    } else {
-      console.log('Фильтр снят');
-      // здесь можно вернуть слои к дефолтному состоянию
+
+    const type = FILTER_TYPE_BY_ID[activeFilter.id];
+    const meta = LAYER_META[type];
+
+    // нет меты — очищаем слой
+    if (!type || !meta) {
+      console.warn('Нет сопоставления id→type или меты для фильтра:', activeFilter);
+      setAirFC(null);
+      return;
     }
-  }, [activeFilter]);
+
+    // рисуем сейчас только air; на других фильтрах очищаем точки
+    if (type !== 'air') {
+      setAirFC(null);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        console.log(`[layer] GET /api/v1/map/layer/${type} (mode=${meta.mode})`);
+        const { data: raw } = await http.get(`/map/layer/${encodeURIComponent(type)}`, {
+          signal: controller.signal,
+        });
+
+        const normalized = meta.adapt ? meta.adapt(raw) : raw;
+
+        // Отладка — по желанию:
+        console.log('[layer] RAW:', raw);
+        console.log('[layer] NORMALIZED count:', Array.isArray(normalized) ? normalized.length : 0);
+
+        // Кладём в стейт в формате для ObjectManager
+        setAirFC(toFeatureCollection(normalized));
+      } catch (err) {
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+        console.error('Ошибка загрузки слоя:', err?.response?.data || err.message);
+        setAirFC(null);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [activeFilter, isLoggedIn]);
+
+  useEffect(() => {
+    if (!omRef.current) return;
+
+    const onObjectClick = (e) => {
+      const objectId = e.get('objectId');
+      const geoObj = omRef.current.objects.getById(objectId);
+      console.log('Клик по точке:', geoObj?.properties);
+      // здесь можно открыть сайдбар / показать карточку
+    };
+
+    omRef.current.objects.events.add('click', onObjectClick);
+    return () => omRef.current?.objects.events.remove('click', onObjectClick);
+  }, [omRef.current]);
 
   /* ========================= Обработчики событий ========================= */
 
@@ -251,15 +379,15 @@ function MapComponent() {
     <YMaps query={{ apikey: config.YANDEX_MAP_API_KEY, lang: 'ru_RU', coordorder: 'longlat' }}>
       <div className="map-container">
         <Map
-          defaultState={{ center: [37.57, 55.75], zoom: 4, controls: [] }} // [lon, lat]
+          defaultState={{ center: [37.57, 55.75], zoom: 4, controls: [] }}
           width="100%"
           height="100svh"
           options={{
-            minZoom: 3, // дальше отдалять нельзя
-            maxZoom: 18, // дальше приближать нельзя
-            avoidFractionalZoom: true, // (по умолчанию на десктопе) без дробных зумов
+            minZoom: 3,
+            maxZoom: 18,
+            avoidFractionalZoom: true,
             restrictMapArea: [
-              [-179.99, -85.0], // [lon, lat]
+              [-179.99, -85.0],
               [179.99, 85.0],
             ],
           }}
@@ -268,7 +396,34 @@ function MapComponent() {
             setMapReady(true);
           }}
           onClick={(e) => mapClickHandler(e)}
-        />
+        >
+          {/* INSERT ↓↓↓ ObjectManager для точек воздуха */}
+          {airFC && (
+            <ObjectManager
+              instanceRef={omRef}
+              features={airFC}
+              options={{
+                clusterize: true,
+                gridSize: 64,
+                clusterDisableClickZoom: false,
+                clusterOpenBalloonOnClick: true,
+              }}
+              objects={{
+                preset: 'islands#blueCircleDotIcon',
+                openBalloonOnClick: true,
+              }}
+              clusters={{
+                preset: 'islands#invertedBlueClusterIcons',
+              }}
+              modules={[
+                'objectManager.addon.objectsHint',
+                'objectManager.addon.objectsBalloon',
+                'objectManager.addon.clustersHint',
+                'objectManager.addon.clustersBalloon',
+              ]}
+            />
+          )}
+        </Map>
       </div>
       <MapSearchBar />
       <MapFilter />
