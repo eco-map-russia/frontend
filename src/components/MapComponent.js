@@ -4,6 +4,7 @@ import { YMaps, Map } from '@pbe/react-yandex-maps';
 import config from '../config/config.json';
 
 import { fetchRegions } from '../store/regions-slice'; // импорт thunk
+import { selectActiveFilter } from '../store/filter-slice';
 
 import MapSearchBar from './UI/MapSearchBar';
 import MapFilter from './UI/MapFilter';
@@ -15,11 +16,12 @@ function MapComponent() {
   const [mapReady, setMapReady] = useState(false);
   const dispatch = useDispatch();
   const { items: regions, status, error } = useSelector((s) => s.regions);
-  const activeFilter = useSelector((s) => s.filter.value);
+  const activeFilter = useSelector(selectActiveFilter);
   const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
 
   const mapRef = useRef(null);
   const polylabelerRef = useRef(null);
+  const didMountRef = useRef(false); // Чтобы не сработал useEffect при первом рендере
 
   /* ========================= Отрисовка Регионов России ========================= */
 
@@ -169,6 +171,22 @@ function MapComponent() {
       console.warn('Ошибка загрузки регионов:', error);
     }
   }, [status, regions, error]);
+
+  /* ========================= Выбранный фильтр ========================= */
+  // Логируем изменение фильтра именно в MapComponent
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    if (activeFilter) {
+      console.log(`Активный фильтр: ${activeFilter.label} (id=${activeFilter.id})`);
+      // здесь же можно инициировать фильтрацию слоёв карты/догрузку данных
+    } else {
+      console.log('Фильтр снят');
+      // здесь можно вернуть слои к дефолтному состоянию
+    }
+  }, [activeFilter]);
 
   /* ========================= Обработчики событий ========================= */
 
