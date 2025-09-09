@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { YMaps, Map } from '@pbe/react-yandex-maps';
 import { ObjectManager } from '@pbe/react-yandex-maps';
@@ -53,6 +53,61 @@ const adaptAirPoints = makePointsAdaptor({
   }),
 });
 
+function makeRegionChoroplethAdaptor({
+  getId,
+  getGeoJsonString,
+  getRegionName,
+  getPercent,
+  extraProps,
+}) {
+  return function adapt(raw) {
+    if (!Array.isArray(raw)) return { type: 'FeatureCollection', features: [] };
+
+    const numifyRing = (ring) => ring.map((pt) => [Number(pt[0]), Number(pt[1])]);
+    const numifyPoly = (poly) => poly.map(numifyRing);
+
+    const features = [];
+
+    for (const r of raw) {
+      let geom;
+      try {
+        const geoJsonStr = getGeoJsonString(r);
+        if (!geoJsonStr) continue;
+        geom = JSON.parse(geoJsonStr);
+      } catch {
+        continue;
+      }
+      if (!geom || !geom.coordinates) continue;
+
+      const baseProps = {
+        regionName: getRegionName(r),
+        percent: Number(getPercent(r)) || 0,
+        ...(typeof extraProps === 'function' ? extraProps(r) : {}),
+      };
+
+      if (geom.type === 'Polygon') {
+        features.push({
+          type: 'Feature',
+          id: String(getId(r)),
+          geometry: { type: 'Polygon', coordinates: numifyPoly(geom.coordinates) },
+          properties: baseProps,
+        });
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach((polyCoords, idx) => {
+          features.push({
+            type: 'Feature',
+            id: `${getId(r)}-${idx}`,
+            geometry: { type: 'Polygon', coordinates: numifyPoly(polyCoords) },
+            properties: baseProps,
+          });
+        });
+      }
+    }
+
+    return { type: 'FeatureCollection', features };
+  };
+}
+
 // INSERT ↓↓↓ новый адаптер для радиации
 const adaptRadiationPoints = makePointsAdaptor({
   getId: (p) => p.pointId,
@@ -70,51 +125,26 @@ const adaptRadiationPoints = makePointsAdaptor({
   }),
 });
 
-function adaptWaterChoropleth(raw) {
-  if (!Array.isArray(raw)) return { type: 'FeatureCollection', features: [] };
+const adaptWaterChoropleth = makeRegionChoroplethAdaptor({
+  getId: (r) => r.regionId,
+  getGeoJsonString: (r) => r.geoJson,
+  getRegionName: (r) => r.regionName,
+  getPercent: (r) => r.dirtySurfaceWaterPercent, // 0..100
+  extraProps: (r) => ({ metric: 'water', dirtySurfaceWaterPercent: r.dirtySurfaceWaterPercent }),
+});
 
-  // хелпер: приводим coord к числам
-  const numifyRing = (ring) => ring.map((pt) => [Number(pt[0]), Number(pt[1])]);
-  const numifyPoly = (poly) => poly.map(numifyRing); // Array<Ring>
-
-  const features = [];
-
-  for (const r of raw) {
-    let geom;
-    try {
-      geom = JSON.parse(r.geoJson); // { type: 'Polygon'|'MultiPolygon', coordinates: ... }
-    } catch {
-      continue;
-    }
-    if (!geom || !geom.coordinates) continue;
-
-    const props = {
-      regionName: r.regionName,
-      percent: r.dirtySurfaceWaterPercent,
-    };
-
-    if (geom.type === 'Polygon') {
-      features.push({
-        type: 'Feature',
-        id: `${r.regionId}`,
-        geometry: { type: 'Polygon', coordinates: numifyPoly(geom.coordinates) },
-        properties: props,
-      });
-    } else if (geom.type === 'MultiPolygon') {
-      // разворачиваем каждый полигон в отдельный Feature
-      geom.coordinates.forEach((polyCoords, idx) => {
-        features.push({
-          type: 'Feature',
-          id: `${r.regionId}-${idx}`,
-          geometry: { type: 'Polygon', coordinates: numifyPoly(polyCoords) },
-          properties: props,
-        });
-      });
-    }
-  }
-
-  return { type: 'FeatureCollection', features };
-}
+const adaptSoilChoropleth = makeRegionChoroplethAdaptor({
+  getId: (r) => r.regionId,
+  getGeoJsonString: (r) => r.geoJson,
+  getRegionName: (r) => r.regionName,
+  // берём % хронического загрязнения почв под раскраску
+  getPercent: (r) => r.chronicSoilPollutionPercent, // 0..100
+  extraProps: (r) => ({
+    metric: 'soil',
+    chronicSoilPollutionPercent: r.chronicSoilPollutionPercent,
+    landDegradationNeutralityIndex: r.landDegradationNeutralityIndex,
+  }),
+});
 
 function percentToColor(p) {
   const clamped = Math.max(0, Math.min(100, Number(p) || 0));
@@ -124,6 +154,44 @@ function percentToColor(p) {
   const b = 60;
   const a = 0.6; // прозрачность заливки
   return `rgba(${r},${g},${b},${a})`;
+}
+
+// Нормализуем 0..100 → 0..1
+const norm01 = (p) => Math.max(0, Math.min(1, (Number(p) || 0) / 100));
+
+// простая линейная интерполяция цветов
+function lerp(a, b, t) {
+  return Math.round(a + (b - a) * t);
+}
+function rgba(r, g, b, a) {
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// Палитра для воды: от светло-голубого к насыщенно-синему
+function waterColor(p) {
+  const t = norm01(p);
+  const r = lerp(80, 0, t); // было 180→0
+  const g = lerp(180, 80, t); // было 220→120
+  const b = lerp(255, 255, t);
+  const a = lerp(0.55, 0.95, t); // было 0.25→0.75
+  return rgba(r, g, b, a);
+}
+
+function soilColor(p) {
+  const t = norm01(p);
+  const r = lerp(100, 210, t); // теплее и ярче
+  const g = lerp(200, 40, t);
+  const b = lerp(70, 40, t);
+  const a = lerp(0.55, 0.95, t);
+  return rgba(r, g, b, a);
+}
+
+// Универсальный селектор палитры
+function fillColorByMetric(metric, p) {
+  if (metric === 'water') return waterColor(p);
+  if (metric === 'soil') return soilColor(p);
+  // fallback — твой старый градиент
+  return percentToColor(p);
 }
 
 // Плейсхолдеры для будущих типов (если будешь использовать позже)
@@ -142,7 +210,7 @@ const LAYER_META = {
   air: { mode: 'points', adapt: adaptAirPoints }, // <— ВАЖНО
   radiation: { mode: 'points', adapt: adaptRadiationPoints },
   water: { mode: 'choropleth', adapt: adaptWaterChoropleth },
-  soil: { mode: 'heatmap', adapt: adaptors.heatmap },
+  soil: { mode: 'choropleth', adapt: adaptSoilChoropleth },
   'cleanup-events': { mode: 'points', adapt: adaptors.points },
 };
 
@@ -170,47 +238,39 @@ function MapComponent() {
   const polylabelerRef = useRef(null);
   // const didMountRef = useRef(false); // Чтобы не сработал useEffect при первом рендере
   const omRef = useRef(null); // ObjectManager для точек
-  const waterLayerRef = useRef(null); // хранит geoQuery результата для воды
+  const regionCollectionRef = useRef(null);
+  //const waterLayerRef = useRef(null); // хранит geoQuery результата для воды
 
-  /* Функция очистки водного слоя */
-  const clearWaterLayer = () => {
-    const layer = waterLayerRef.current;
-    if (!layer) return;
+  /* ========================= Работа с коллекцией регионов ========================= */
+  const ensureRegionCollection = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !window.ymaps) return null;
+    if (!regionCollectionRef.current) {
+      regionCollectionRef.current = new window.ymaps.GeoObjectCollection();
+      map.geoObjects.add(regionCollectionRef.current);
+    }
+    return regionCollectionRef.current;
+  }, []); //
 
+  const clearRegionCollection = () => {
+    const coll = regionCollectionRef.current;
+    if (!coll) return;
     try {
-      // новый формат: { result, map }
-      if (layer.result && typeof layer.result.removeFromMap === 'function') {
-        // safer: передаём карту, если есть
-        if (layer.map) {
-          layer.result.removeFromMap(layer.map);
-        } else {
-          layer.result.removeFromMap();
-        }
-      }
-      // старый формат (на всякий случай): GeoQueryResult напрямую
-      else if (typeof layer.removeFromMap === 'function') {
-        const map = mapRef.current || undefined;
-        try {
-          // пробуем с картой; если вдруг упрёмся в WeakMap — повторим без карты
-          layer.removeFromMap(map);
-        } catch (e) {
-          layer.removeFromMap();
-        }
-      }
-      // аварийный план: вручную удалить объекты
-      else if (layer.each && mapRef.current?.geoObjects) {
-        layer.each((obj) => {
-          try {
-            mapRef.current.geoObjects.remove(obj);
-          } catch {}
-        });
-      }
+      coll.removeAll();
     } catch (e) {
-      console.warn('clearWaterLayer error:', e);
-    } finally {
-      waterLayerRef.current = null;
+      console.warn('removeAll failed', e);
     }
   };
+
+  const bringRegionCollectionToFront = useCallback(() => {
+    const map = mapRef.current;
+    const coll = ensureRegionCollection();
+    if (!map || !coll) return;
+    try {
+      map.geoObjects.remove(coll);
+      map.geoObjects.add(coll);
+    } catch {}
+  }, [ensureRegionCollection]);
 
   /* ========================= Отрисовка Регионов России ========================= */
 
@@ -382,7 +442,7 @@ function MapComponent() {
     if (!activeFilter || !isLoggedIn) {
       setPointsFC(null);
       // снять водный слой, если был
-      clearWaterLayer();
+      clearRegionCollection();
       return;
     }
 
@@ -390,7 +450,7 @@ function MapComponent() {
     const meta = LAYER_META[type];
     if (!type || !meta) {
       setPointsFC(null);
-      clearWaterLayer();
+      clearRegionCollection();
       return;
     }
 
@@ -408,70 +468,89 @@ function MapComponent() {
           setPointsFC(toFeatureCollection(normalized));
 
           // снести водный слой, если был
-          clearWaterLayer();
+          clearRegionCollection();
           return;
         }
 
         // CHOROPLETH — строим FC и рисуем полигоны
         if (meta.mode === 'choropleth') {
-          const fc = meta.adapt(raw); // FeatureCollection с Polygon/MultiPolygon
-          console.log('WATER FC stats:', {
-            features: fc.features.length,
-            samples: fc.features.slice(0, 1),
-          });
-
-          // 🛡️ гард от пустых/кривых данных
+          const fc = meta.adapt(raw);
           if (!fc || !Array.isArray(fc.features) || fc.features.length === 0) {
-            clearWaterLayer();
+            clearRegionCollection();
             setPointsFC(null);
             return;
           }
 
           const ymaps = window.ymaps;
-          if (!ymaps || !mapRef.current) return;
+          const map = mapRef.current;
+          if (!ymaps || !map) return;
 
-          // снести прежний слой, если был
-          clearWaterLayer();
-
-          const qAll = ymaps.geoQuery(fc);
-          const polygons = qAll.search('geometry.type="Polygon"').addToMap(mapRef.current);
-
-          polygons.each((obj) => {
-            const p = obj.properties.get('percent');
-            obj.options.set({
-              fillColor: percentToColor(p),
-              strokeColor: '#ffffff',
-              strokeOpacity: 0.9,
-              strokeWidth: 1,
-            });
-            obj.properties.set(
-              'hintContent',
-              `${obj.properties.get('regionName')} • Загрязнение: ${p}%`,
-            );
+          // 1) очистили
+          clearRegionCollection();
+          // 2) убедились, что коллекция есть и прикреплена к карте
+          const coll = ensureRegionCollection();
+          coll.options.set({
+            zIndex: 3000,
+            zIndexHover: 3001,
+            zIndexActive: 3002,
+            zIndexDrag: 3003,
           });
+          if (!coll) return;
+          bringRegionCollectionToFront();
 
-          // вместо waterLayerRef.current = polygons;
-          waterLayerRef.current = { result: polygons, map: mapRef.current };
+          for (const f of fc.features) {
+            const regionName = f.properties.regionName;
+            const rawP = f.properties.percent;
+            // 9999 трактуем как «нет данных»
+            const isNoData = Number(rawP) >= 9999;
+            const p = isNoData ? 0 : Math.max(0, Math.min(100, Number(rawP) || 0));
+            const metric = f.properties.metric;
 
-          // точки скрываем
+            let hint = `${regionName} • ${isNoData ? 'нет данных' : p + '%'}`;
+            if (metric === 'soil') {
+              const csp = f.properties.chronicSoilPollutionPercent;
+              const ldn = f.properties.landDegradationNeutralityIndex;
+              hint = `${regionName}\n• Хрон. загрязнение: ${isNoData ? 'н/д' : csp + '%'}\n• Индекс LDN: ${ldn}`;
+            } else if (metric === 'water') {
+              hint = `${regionName} • Загрязнение воды: ${isNoData ? 'н/д' : p + '%'}`;
+            }
+
+            const poly = new ymaps.Polygon(
+              f.geometry.coordinates,
+              { ...f.properties, hintContent: hint },
+              {
+                fillColor: isNoData ? 'rgba(160,160,160,0.75)' : fillColorByMetric(metric, p), // ↑ плотнее
+                fillOpacity: 0.85, // ← принудительно плотнее заливка (на случай, если в цвете альфа низкая)
+                strokeColor: '#ffffff',
+                strokeOpacity: 0.9,
+                strokeWidth: 1.2,
+                zIndex: 3000, // ← выше подложки
+                zIndexHover: 3001,
+                zIndexActive: 3002,
+                zIndexDrag: 3003,
+              },
+            );
+            coll.add(poly);
+          }
+
           setPointsFC(null);
           return;
         }
 
         // другие режимы (heatmap для soil — оставим на потом)
         setPointsFC(null);
-        clearWaterLayer();
+        clearRegionCollection();
       } catch (err) {
         if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
           console.error('Ошибка загрузки слоя:', err?.response?.data || err.message);
         }
         setPointsFC(null);
-        clearWaterLayer();
+        clearRegionCollection();
       }
     })();
 
     return () => controller.abort();
-  }, [activeFilter, isLoggedIn]);
+  }, [activeFilter, isLoggedIn, bringRegionCollectionToFront, ensureRegionCollection]);
 
   const hasPoints = !!pointsFC;
   useEffect(() => {
