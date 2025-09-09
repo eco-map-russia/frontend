@@ -70,6 +70,62 @@ const adaptRadiationPoints = makePointsAdaptor({
   }),
 });
 
+function adaptWaterChoropleth(raw) {
+  if (!Array.isArray(raw)) return { type: 'FeatureCollection', features: [] };
+
+  // хелпер: приводим coord к числам
+  const numifyRing = (ring) => ring.map((pt) => [Number(pt[0]), Number(pt[1])]);
+  const numifyPoly = (poly) => poly.map(numifyRing); // Array<Ring>
+
+  const features = [];
+
+  for (const r of raw) {
+    let geom;
+    try {
+      geom = JSON.parse(r.geoJson); // { type: 'Polygon'|'MultiPolygon', coordinates: ... }
+    } catch {
+      continue;
+    }
+    if (!geom || !geom.coordinates) continue;
+
+    const props = {
+      regionName: r.regionName,
+      percent: r.dirtySurfaceWaterPercent,
+    };
+
+    if (geom.type === 'Polygon') {
+      features.push({
+        type: 'Feature',
+        id: `${r.regionId}`,
+        geometry: { type: 'Polygon', coordinates: numifyPoly(geom.coordinates) },
+        properties: props,
+      });
+    } else if (geom.type === 'MultiPolygon') {
+      // разворачиваем каждый полигон в отдельный Feature
+      geom.coordinates.forEach((polyCoords, idx) => {
+        features.push({
+          type: 'Feature',
+          id: `${r.regionId}-${idx}`,
+          geometry: { type: 'Polygon', coordinates: numifyPoly(polyCoords) },
+          properties: props,
+        });
+      });
+    }
+  }
+
+  return { type: 'FeatureCollection', features };
+}
+
+function percentToColor(p) {
+  const clamped = Math.max(0, Math.min(100, Number(p) || 0));
+  const t = clamped / 100; // 0..1
+  const r = Math.round(255 * t);
+  const g = Math.round(200 * (1 - t));
+  const b = 60;
+  const a = 0.6; // прозрачность заливки
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 // Плейсхолдеры для будущих типов (если будешь использовать позже)
 const adaptors = {
   points: (raw) =>
@@ -85,7 +141,7 @@ const adaptors = {
 const LAYER_META = {
   air: { mode: 'points', adapt: adaptAirPoints }, // <— ВАЖНО
   radiation: { mode: 'points', adapt: adaptRadiationPoints },
-  water: { mode: 'heatmap', adapt: adaptors.heatmap },
+  water: { mode: 'choropleth', adapt: adaptWaterChoropleth },
   soil: { mode: 'heatmap', adapt: adaptors.heatmap },
   'cleanup-events': { mode: 'points', adapt: adaptors.points },
 };
@@ -114,6 +170,47 @@ function MapComponent() {
   const polylabelerRef = useRef(null);
   // const didMountRef = useRef(false); // Чтобы не сработал useEffect при первом рендере
   const omRef = useRef(null); // ObjectManager для точек
+  const waterLayerRef = useRef(null); // хранит geoQuery результата для воды
+
+  /* Функция очистки водного слоя */
+  const clearWaterLayer = () => {
+    const layer = waterLayerRef.current;
+    if (!layer) return;
+
+    try {
+      // новый формат: { result, map }
+      if (layer.result && typeof layer.result.removeFromMap === 'function') {
+        // safer: передаём карту, если есть
+        if (layer.map) {
+          layer.result.removeFromMap(layer.map);
+        } else {
+          layer.result.removeFromMap();
+        }
+      }
+      // старый формат (на всякий случай): GeoQueryResult напрямую
+      else if (typeof layer.removeFromMap === 'function') {
+        const map = mapRef.current || undefined;
+        try {
+          // пробуем с картой; если вдруг упрёмся в WeakMap — повторим без карты
+          layer.removeFromMap(map);
+        } catch (e) {
+          layer.removeFromMap();
+        }
+      }
+      // аварийный план: вручную удалить объекты
+      else if (layer.each && mapRef.current?.geoObjects) {
+        layer.each((obj) => {
+          try {
+            mapRef.current.geoObjects.remove(obj);
+          } catch {}
+        });
+      }
+    } catch (e) {
+      console.warn('clearWaterLayer error:', e);
+    } finally {
+      waterLayerRef.current = null;
+    }
+  };
 
   /* ========================= Отрисовка Регионов России ========================= */
 
@@ -281,23 +378,19 @@ function MapComponent() {
   // }, [activeFilter]);
 
   useEffect(() => {
+    // очистка на логауте/сбросе фильтра
     if (!activeFilter || !isLoggedIn) {
       setPointsFC(null);
+      // снять водный слой, если был
+      clearWaterLayer();
       return;
     }
 
     const type = FILTER_TYPE_BY_ID[activeFilter.id];
     const meta = LAYER_META[type];
-
     if (!type || !meta) {
-      console.warn('Нет сопоставления id→type или меты для фильтра:', activeFilter);
       setPointsFC(null);
-      return;
-    }
-
-    // Если текущий слой НЕ точечный — очищаем точки и выходим
-    if (meta.mode !== 'points') {
-      setPointsFC(null);
+      clearWaterLayer();
       return;
     }
 
@@ -305,44 +398,128 @@ function MapComponent() {
 
     (async () => {
       try {
-        console.log(`[layer] GET /api/v1/map/layer/${type} (mode=${meta.mode})`);
         const { data: raw } = await http.get(`/map/layer/${encodeURIComponent(type)}`, {
           signal: controller.signal,
         });
 
-        const normalized = meta.adapt ? meta.adapt(raw) : raw;
+        // POINTS — как раньше
+        if (meta.mode === 'points') {
+          const normalized = meta.adapt ? meta.adapt(raw) : raw;
+          setPointsFC(toFeatureCollection(normalized));
 
-        // (отладка по желанию)
-        console.log('[layer] NORMALIZED count:', Array.isArray(normalized) ? normalized.length : 0);
+          // снести водный слой, если был
+          clearWaterLayer();
+          return;
+        }
 
-        // Кладём в общий стейт для ObjectManager
-        setPointsFC(toFeatureCollection(normalized));
-      } catch (err) {
-        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
-        console.error('Ошибка загрузки слоя:', err?.response?.data || err.message);
+        // CHOROPLETH — строим FC и рисуем полигоны
+        if (meta.mode === 'choropleth') {
+          const fc = meta.adapt(raw); // FeatureCollection с Polygon/MultiPolygon
+          console.log('WATER FC stats:', {
+            features: fc.features.length,
+            samples: fc.features.slice(0, 1),
+          });
+
+          // 🛡️ гард от пустых/кривых данных
+          if (!fc || !Array.isArray(fc.features) || fc.features.length === 0) {
+            clearWaterLayer();
+            setPointsFC(null);
+            return;
+          }
+
+          const ymaps = window.ymaps;
+          if (!ymaps || !mapRef.current) return;
+
+          // снести прежний слой, если был
+          clearWaterLayer();
+
+          const qAll = ymaps.geoQuery(fc);
+          const polygons = qAll.search('geometry.type="Polygon"').addToMap(mapRef.current);
+
+          polygons.each((obj) => {
+            const p = obj.properties.get('percent');
+            obj.options.set({
+              fillColor: percentToColor(p),
+              strokeColor: '#ffffff',
+              strokeOpacity: 0.9,
+              strokeWidth: 1,
+            });
+            obj.properties.set(
+              'hintContent',
+              `${obj.properties.get('regionName')} • Загрязнение: ${p}%`,
+            );
+          });
+
+          // вместо waterLayerRef.current = polygons;
+          waterLayerRef.current = { result: polygons, map: mapRef.current };
+
+          // точки скрываем
+          setPointsFC(null);
+          return;
+        }
+
+        // другие режимы (heatmap для soil — оставим на потом)
         setPointsFC(null);
+        clearWaterLayer();
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+          console.error('Ошибка загрузки слоя:', err?.response?.data || err.message);
+        }
+        setPointsFC(null);
+        clearWaterLayer();
       }
     })();
 
     return () => controller.abort();
   }, [activeFilter, isLoggedIn]);
 
+  const hasPoints = !!pointsFC;
   useEffect(() => {
     const om = omRef.current;
-    if (!om) return;
+
+    // Вешаем хэндлер только если OM реально есть и у него есть events
+    const canAttach =
+      om &&
+      om.objects &&
+      om.objects.events &&
+      typeof om.objects.events.add === 'function' &&
+      typeof om.objects.events.remove === 'function';
+
+    if (!canAttach) return;
 
     const onObjectClick = (e) => {
-      const objectId = e.get('objectId');
-      const geoObj = omRef.current.objects.getById(objectId);
-      console.log('Клик по точке:', geoObj?.properties);
-      // здесь можно открыть сайдбар / показать карточку
+      try {
+        const objectId = e.get('objectId');
+        const targetOm = omRef.current; // мог измениться
+        const geoObj =
+          targetOm && targetOm.objects && typeof targetOm.objects.getById === 'function'
+            ? targetOm.objects.getById(objectId)
+            : null;
+        console.log('Клик по точке:', geoObj?.properties);
+      } catch (err) {
+        console.warn('OM click handler error:', err);
+      }
     };
 
-    omRef.current.objects.events.add('click', onObjectClick);
+    om.objects.events.add('click', onObjectClick);
+
     return () => {
-      om.objects.events.remove('click', onObjectClick);
+      try {
+        // защита от состояния после размонтирования
+        if (
+          om &&
+          om.objects &&
+          om.objects.events &&
+          typeof om.objects.events.remove === 'function'
+        ) {
+          om.objects.events.remove('click', onObjectClick);
+        }
+      } catch (err) {
+        console.warn('Detach OM click handler error:', err);
+      }
     };
-  }, [pointsFC]);
+    // Привязываем/отвязываем только по факту наличия точек
+  }, [hasPoints]);
 
   /* ========================= Обработчики событий ========================= */
 

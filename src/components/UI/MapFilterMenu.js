@@ -6,8 +6,8 @@ import FilterMenuOption from './FilterMenuOption';
 const filters = [
   { filterId: 0, label: 'Загрязнение воздуха' },
   { filterId: 1, label: 'Уровень радиации' },
-  { filterId: 2, label: 'Вредные выбросы' },
-  { filterId: 3, label: 'Заповедники' },
+  { filterId: 2, label: 'Загрязнение воды' },
+  { filterId: 3, label: 'Загрязнение почвы' },
   { filterId: 4, label: 'Экологические инициативы' },
 ];
 
