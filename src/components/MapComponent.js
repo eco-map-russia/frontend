@@ -125,6 +125,24 @@ const adaptRadiationPoints = makePointsAdaptor({
   }),
 });
 
+const adaptCleanupEventsPoints = makePointsAdaptor({
+  getId: (p) => p.id,
+  getName: (p) => p.cityName ?? 'Инициатива',
+  getLonLat: (p) => [p.coordinatesResponseDto.lon, p.coordinatesResponseDto.lat],
+  toProps: (p) => ({
+    // всплывающая подсказка + дата
+    hintContent: `${p.cityName ?? 'Инициатива'} • ${formatDate(p.date)}`,
+    // балун с городом, местом и датой
+    balloonContent: `
+      <div style="font-size:13px;line-height:1.35">
+        <b>${p.cityName ?? 'Инициатива'}</b><br/>
+        ${p.location ? `Место: ${p.location}<br/>` : ''}
+        Дата: ${formatDate(p.date)}
+      </div>
+    `,
+  }),
+});
+
 const adaptWaterChoropleth = makeRegionChoroplethAdaptor({
   getId: (r) => r.regionId,
   getGeoJsonString: (r) => r.geoJson,
@@ -194,24 +212,13 @@ function fillColorByMetric(metric, p) {
   return percentToColor(p);
 }
 
-// Плейсхолдеры для будущих типов (если будешь использовать позже)
-const adaptors = {
-  points: (raw) =>
-    (Array.isArray(raw) ? raw : []).map((p) => ({
-      id: p.id ?? `${p.lon},${p.lat}`,
-      coords: [p.lon, p.lat],
-      props: { name: p.name ?? '', description: p.description ?? '' },
-    })),
-  heatmap: (raw) => (Array.isArray(raw) ? raw : []).map((p) => [p.lon, p.lat, p.weight ?? 1]),
-};
-
 // ✅ Подкорректированный meta: для air используем adaptAirPoints
 const LAYER_META = {
   air: { mode: 'points', adapt: adaptAirPoints }, // <— ВАЖНО
   radiation: { mode: 'points', adapt: adaptRadiationPoints },
   water: { mode: 'choropleth', adapt: adaptWaterChoropleth },
   soil: { mode: 'choropleth', adapt: adaptSoilChoropleth },
-  'cleanup-events': { mode: 'points', adapt: adaptors.points },
+  'cleanup-events': { mode: 'points', adapt: adaptCleanupEventsPoints },
 };
 
 function toFeatureCollection(points) {
@@ -224,6 +231,12 @@ function toFeatureCollection(points) {
       properties: p.props,
     })),
   };
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('ru-RU');
 }
 
 function MapComponent() {
