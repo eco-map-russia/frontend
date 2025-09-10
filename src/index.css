@@ -119,9 +119,18 @@ code {
 /* Фильтр карты */
 
 /* общий обёртчик кнопки и меню */
+
+
 .map-filter {
   position: absolute;
   top: 3.2em;
+  left: 1%;              /* или right: 1%; если кнопка у правого края */
+  z-index: 20;
+}
+
+.admin-panel {
+  position: absolute;
+  top: 12em;
   left: 1%;              /* или right: 1%; если кнопка у правого края */
   z-index: 20;
 }

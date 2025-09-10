@@ -10,6 +10,7 @@ import { selectActiveFilter } from '../store/filter-slice';
 
 import MapSearchBar from './UI/MapSearchBar';
 import MapFilter from './UI/MapFilter';
+import AdminPanel from './UI/AdminPanel';
 import SideBar from './UI/SideBar';
 import NavigateButtons from './UI/NavigateButtons';
 import MapCalendar from './UI/MapCalendar';
@@ -724,6 +725,7 @@ function MapComponent() {
       </div>
       <MapSearchBar />
       <MapFilter />
+      <AdminPanel />
       <SideBar />
       <NavigateButtons
         onZoomToUser={zoomToUserHandler}
