@@ -177,6 +177,149 @@ const RESOURCES = {
       DELETE: { needsId: true, bodyFields: [] },
     },
   },
+
+  water: {
+    label: 'Вода',
+    base: '/admin/water',
+    methods: {
+      GET: {
+        needsId: false,
+        queryFields: [
+          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
+          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
+        ],
+      },
+      POST: {
+        needsId: false,
+        includeIdInBody: false,
+        bodyFields: [
+          { name: 'regionId', label: 'Region ID', type: 'text', required: true },
+          {
+            name: 'dirtySurfaceWaterPercent',
+            label: 'Загрязнённые поверхностные воды (%)',
+            type: 'number',
+            step: 0.1,
+            required: true,
+          },
+        ],
+      },
+      PUT: {
+        needsId: true,
+        includeIdInBody: true,
+        bodyFields: [
+          { name: 'id', label: 'ID', type: 'text', required: true },
+          { name: 'regionId', label: 'Region ID', type: 'text', required: true },
+          {
+            name: 'dirtySurfaceWaterPercent',
+            label: 'Загрязнённые поверхностные воды (%)',
+            type: 'number',
+            step: 0.1,
+            required: true,
+          },
+        ],
+      },
+      DELETE: { needsId: true, bodyFields: [] },
+    },
+  },
+
+  points: {
+    label: 'Точки наблюдения',
+    base: '/admin/points',
+    methods: {
+      GET: {
+        needsId: false,
+        queryFields: [
+          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
+          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
+        ],
+      },
+      POST: {
+        needsId: false,
+        includeIdInBody: false,
+        bodyFields: [
+          { name: 'name', label: 'Название', type: 'text', required: true },
+          { name: 'cityId', label: 'City ID', type: 'text', required: true },
+          {
+            name: 'latitude',
+            label: 'Широта',
+            type: 'number',
+            step: 0.000001,
+            min: -90,
+            max: 90,
+            required: true,
+          },
+          {
+            name: 'longitude',
+            label: 'Долгота',
+            type: 'number',
+            step: 0.000001,
+            min: -180,
+            max: 180,
+            required: true,
+          },
+        ],
+      },
+      PUT: {
+        needsId: true,
+        includeIdInBody: true,
+        bodyFields: [
+          { name: 'id', label: 'ID', type: 'text', required: true },
+          { name: 'name', label: 'Название', type: 'text', required: true },
+          { name: 'cityId', label: 'City ID', type: 'text', required: true },
+          {
+            name: 'latitude',
+            label: 'Широта',
+            type: 'number',
+            step: 0.000001,
+            min: -90,
+            max: 90,
+            required: true,
+          },
+          {
+            name: 'longitude',
+            label: 'Долгота',
+            type: 'number',
+            step: 0.000001,
+            min: -180,
+            max: 180,
+            required: true,
+          },
+        ],
+      },
+      DELETE: { needsId: true, bodyFields: [] },
+    },
+  },
+
+  // /api/v1/admin/cities — только GET с query-параметрами page/size
+  cities: {
+    label: 'Города',
+    base: '/admin/cities',
+    methods: {
+      GET: {
+        needsId: false,
+        queryFields: [
+          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
+          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
+        ],
+      },
+      // других методов нет
+    },
+  },
+
+  // /api/v1/admin/regions — только GET с query-параметрами page/size
+  regions: {
+    label: 'Регионы',
+    base: '/admin/regions',
+    methods: {
+      GET: {
+        needsId: false,
+        queryFields: [
+          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
+          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
+        ],
+      },
+    },
+  },
 };
 
 export default RESOURCES;
