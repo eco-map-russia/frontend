@@ -7,6 +7,7 @@ import config from '../config/config.json';
 import { http } from '../api/http';
 import { fetchRegions } from '../store/regions-slice'; // импорт thunk
 import { selectActiveFilter } from '../store/filter-slice';
+import { fetchProfile, selectIsAdmin, selectProfile } from '../store/user-profile-slice';
 
 import MapSearchBar from './UI/MapSearchBar';
 import MapFilter from './UI/MapFilter';
@@ -247,6 +248,8 @@ function MapComponent() {
   const { items: regions, status, error } = useSelector((s) => s.regions);
   const activeFilter = useSelector(selectActiveFilter);
   const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
+  const { status: profileStatus } = useSelector(selectProfile);
+  const isAdmin = useSelector(selectIsAdmin);
 
   const mapRef = useRef(null);
   const polylabelerRef = useRef(null);
@@ -254,6 +257,14 @@ function MapComponent() {
   const omRef = useRef(null); // ObjectManager для точек
   const regionCollectionRef = useRef(null);
   //const waterLayerRef = useRef(null); // хранит geoQuery результата для воды
+
+  /* ========================= Профиль пользователя (для админа) ========================= */
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (profileStatus === 'idle') {
+      dispatch(fetchProfile());
+    }
+  }, [isLoggedIn, profileStatus, dispatch]);
 
   /* ========================= Работа с коллекцией регионов ========================= */
   const ensureRegionCollection = useCallback(() => {
@@ -725,7 +736,7 @@ function MapComponent() {
       </div>
       <MapSearchBar />
       <MapFilter />
-      <AdminPanel />
+      {isLoggedIn && profileStatus === 'succeeded' && isAdmin && <AdminPanel />}
       <SideBar />
       <NavigateButtons
         onZoomToUser={zoomToUserHandler}

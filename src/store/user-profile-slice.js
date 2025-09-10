@@ -45,5 +45,22 @@ const profileSlice = createSlice({
   },
 });
 
+const hasAdminRole = (roles) => {
+  if (Array.isArray(roles)) {
+    return roles.some((r) => typeof r === 'string' && r.toUpperCase() === 'ROLE_ADMIN');
+  }
+  // На всякий случай поддержим ошибочный ответ вида { role: 'ROLE_ADMIN' }
+  if (roles && typeof roles === 'object' && typeof roles.role === 'string') {
+    return roles.role.toUpperCase() === 'ROLE_ADMIN';
+  }
+  if (typeof roles === 'string') {
+    return roles.toUpperCase() === 'ROLE_ADMIN';
+  }
+  return false;
+};
+
+export const selectProfile = (state) => state.profile;
+export const selectIsAdmin = (state) => hasAdminRole(state.profile.user?.roles);
+
 export const { clearProfile } = profileSlice.actions;
 export default profileSlice.reducer;
