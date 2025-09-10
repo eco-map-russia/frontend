@@ -1,4 +1,6 @@
-// Универсальные описатели полей
+// src/admin/resourcesConfig.js
+
+// ===== утилиты для описания полей =====
 const uuid = (name, label, required = true) => ({
   name,
   label,
@@ -7,6 +9,7 @@ const uuid = (name, label, required = true) => ({
   placeholder: 'UUID',
 });
 const text = (name, label, required = true) => ({ name, label, type: 'text', required });
+const textarea = (name, label, required = false) => ({ name, label, type: 'textarea', required });
 const number = (name, label, min = null, max = null, step = 'any', required = true) => ({
   name,
   label,
@@ -16,29 +19,36 @@ const number = (name, label, min = null, max = null, step = 'any', required = tr
   step,
   required,
 });
+const int = (name, label, min = null, max = null, required = true) => ({
+  name,
+  label,
+  type: 'number',
+  min,
+  max,
+  step: 1,
+  required,
+});
 const date = (name, label, required = true) => ({ name, label, type: 'date', required });
 
-// Вложенные поля (пример для координат)
-const group = (name, label, fields) => ({ name, label, type: 'group', fields });
-
-// === Конфиг по сущностям ===
-// На каждый метод указываем: нужен ли id в path, какие поля показывать в форме, и включать ли id в тело (PUT обычно да).
+// ===== конфиг по сущностям =====
 const RESOURCES = {
   'nature-reserve': {
     label: 'Заповедники',
     base: '/admin/nature-reserve',
     methods: {
-      GET: { needsId: false, bodyFields: [] },
+      GET: {
+        needsId: false,
+        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
+      },
       POST: {
         needsId: false,
         includeIdInBody: false,
         bodyFields: [
-          // по REST обычно id для POST не передаем — бэкенд генерит
           text('name', 'Название'),
           uuid('regionId', 'Region ID'),
           number('area', 'Площадь (км²)', 0, null, 0.01),
-          number('yearFounded', 'Год основания', 0, 3000, 1),
-          text('description', 'Описание', false),
+          int('yearFounded', 'Год основания', 0, 3000),
+          textarea('description', 'Описание', false),
           text('website', 'Сайт', false),
         ],
       },
@@ -50,8 +60,8 @@ const RESOURCES = {
           text('name', 'Название'),
           uuid('regionId', 'Region ID'),
           number('area', 'Площадь (км²)', 0, null, 0.01),
-          number('yearFounded', 'Год основания', 0, 3000, 1),
-          text('description', 'Описание', false),
+          int('yearFounded', 'Год основания', 0, 3000),
+          textarea('description', 'Описание', false),
           text('website', 'Сайт', false),
         ],
       },
@@ -63,7 +73,10 @@ const RESOURCES = {
     label: 'Почва',
     base: '/admin/soil',
     methods: {
-      GET: { needsId: false, bodyFields: [] },
+      GET: {
+        needsId: false,
+        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
+      },
       POST: {
         needsId: false,
         includeIdInBody: false,
@@ -103,18 +116,20 @@ const RESOURCES = {
     label: 'Субботники',
     base: '/admin/cleanup-events',
     methods: {
-      GET: { needsId: false, bodyFields: [] },
+      GET: {
+        needsId: false,
+        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
+      },
       POST: {
         needsId: false,
         includeIdInBody: false,
         bodyFields: [
-          text('cityName', 'Город'),
           text('location', 'Локация'),
+          uuid('cityId', 'City ID'),
           date('date', 'Дата'),
-          group('coordinatesResponseDto', 'Координаты', [
-            number('lat', 'Широта', -90, 90, 0.000001),
-            number('lon', 'Долгота', -180, 180, 0.000001),
-          ]),
+          text('organizer', 'Организатор'),
+          textarea('description', 'Описание', false),
+          int('participantsExpected', 'Ожидаемые участники', 0),
         ],
       },
       PUT: {
@@ -122,13 +137,12 @@ const RESOURCES = {
         includeIdInBody: true,
         bodyFields: [
           uuid('id', 'ID'),
-          text('cityName', 'Город'),
           text('location', 'Локация'),
+          uuid('cityId', 'City ID'),
           date('date', 'Дата'),
-          group('coordinatesResponseDto', 'Координаты', [
-            number('lat', 'Широта', -90, 90, 0.000001),
-            number('lon', 'Долгота', -180, 180, 0.000001),
-          ]),
+          text('organizer', 'Организатор'),
+          textarea('description', 'Описание', false),
+          int('participantsExpected', 'Ожидаемые участники', 0),
         ],
       },
       DELETE: { needsId: true, bodyFields: [] },
@@ -139,15 +153,16 @@ const RESOURCES = {
     label: 'Радиация',
     base: '/admin/radiation',
     methods: {
-      GET: { needsId: false, bodyFields: [] },
-      // Ниже — пример; при необходимости скорректируйте имена полей под ваш бекенд
+      GET: {
+        needsId: false,
+        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
+      },
       POST: {
         needsId: false,
         includeIdInBody: false,
         bodyFields: [
-          uuid('regionId', 'Region ID'),
-          number('gammaBackground', 'Гамма-фон (µR/h)', 0, null, 0.1),
-          date('measuredAt', 'Дата измерения'),
+          uuid('pointId', 'Point ID'),
+          number('betaFallout', 'Бета-выпадения', 0, null, 0.1),
         ],
       },
       PUT: {
@@ -155,9 +170,8 @@ const RESOURCES = {
         includeIdInBody: true,
         bodyFields: [
           uuid('id', 'ID'),
-          uuid('regionId', 'Region ID'),
-          number('gammaBackground', 'Гамма-фон (µR/h)', 0, null, 0.1),
-          date('measuredAt', 'Дата измерения'),
+          uuid('pointId', 'Point ID'),
+          number('betaFallout', 'Бета-выпадения', 0, null, 0.1),
         ],
       },
       DELETE: { needsId: true, bodyFields: [] },

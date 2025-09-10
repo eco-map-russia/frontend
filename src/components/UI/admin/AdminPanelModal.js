@@ -109,7 +109,7 @@ export default function AdminPanelModal({ open, onClose }) {
 function FormFields({ method, methodCfg, values, onChange }) {
   const rows = [];
 
-  // Для методов с id в path — отдельное поле ID сверху
+  // ID в URL (PUT/DELETE)
   if (methodCfg.needsId) {
     rows.push(
       <label key="id" className="admin-field">
@@ -125,34 +125,47 @@ function FormFields({ method, methodCfg, values, onChange }) {
     );
   }
 
-  // Поля для тела (POST/PUT)
+  // Поля для GET (query ?page=&size=)
+  if (method === 'GET' && methodCfg.queryFields?.length) {
+    methodCfg.queryFields.forEach((f) => {
+      rows.push(
+        <label key={`body-${f.name}`} className="admin-field">
+          {f.label}
+          <input
+            type="number"
+            min={f.min ?? undefined}
+            max={f.max ?? undefined}
+            step={f.step ?? undefined}
+            required={!!f.required}
+            value={values?.[f.name] ?? ''}
+            onChange={(e) => onChange([f.name], e.target.value)}
+          />
+        </label>,
+      );
+    });
+  }
+
+  // Поля тела (POST/PUT)
   if (method === 'POST' || method === 'PUT') {
     methodCfg.bodyFields.forEach((f) => {
-      if (f.type === 'group') {
+      // при PUT не рендерим дублирующийся id из body
+      if (method === 'PUT' && methodCfg.needsId && f.name === 'id') return;
+
+      if (f.type === 'textarea') {
         rows.push(
-          <fieldset key={f.name} className="admin-fieldset">
-            <legend>{f.label}</legend>
-            <div className="admin-grid">
-              {f.fields.map((sf) => (
-                <label key={`${f.name}.${sf.name}`} className="admin-field">
-                  {sf.label}
-                  <input
-                    type={sf.type === 'number' ? 'number' : sf.type}
-                    min={sf.min ?? undefined}
-                    max={sf.max ?? undefined}
-                    step={sf.step ?? undefined}
-                    required={!!sf.required}
-                    value={values?.[f.name]?.[sf.name] ?? ''}
-                    onChange={(e) => onChange([f.name, sf.name], e.target.value)}
-                  />
-                </label>
-              ))}
-            </div>
-          </fieldset>,
+          <label key={`body-${f.name}`} className="admin-field">
+            {f.label}
+            <textarea
+              rows={3}
+              value={values?.[f.name] ?? ''}
+              onChange={(e) => onChange([f.name], e.target.value)}
+              required={!!f.required}
+            />
+          </label>,
         );
       } else {
         rows.push(
-          <label key={f.name} className="admin-field">
+          <label key={`body-${f.name}`} className="admin-field">
             {f.label}
             <input
               type={f.type === 'number' ? 'number' : f.type}
@@ -170,7 +183,6 @@ function FormFields({ method, methodCfg, values, onChange }) {
     });
   }
 
-  // Для GET без id и DELETE кроме id — полей тела нет
   if (!rows.length) {
     return <p className="admin-hint">Для выбранного метода дополнительных полей не требуется.</p>;
   }
