@@ -235,6 +235,62 @@ code {
   
 }
 
+/* Компонент админ панели */
+.admin-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+
+  display: flex;
+  justify-content: center;   /* по горизонтали оставляем центр */
+  align-items: flex-start;   /* прижимаем контент к верху */
+  overflow-y: auto;          /* чтобы при большом контенте была прокрутка */
+}
+.admin-modal__content {
+  width: min(920px, 96vw);
+  max-height: 90vh;
+  margin-top: 5vh;  
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+  padding: 16px 20px 20px;
+}
+.admin-modal__header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.admin-field, .admin-fieldset { display: block; }
+.admin-field input, .admin-field select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+}
+.admin-fieldset {
+  border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px;
+}
+.admin-actions { margin-top: 14px; display: flex; gap: 8px; }
+.admin-btn {
+  padding: 8px 14px; border-radius: 10px; border: none; cursor: pointer;
+  background: #0ea5e9; color: white; font-weight: 600;
+}
+.admin-btn[disabled] { opacity: .6; cursor: default; }
+.admin-btn--ghost { background: transparent; color: #111; }
+.admin-hint { color: #666; margin: 6px 0 0 2px; }
+.admin-result {
+  margin-top: 12px; background: #0b10221a;
+  padding: 10px; border-radius: 10px; font-size: 13px;
+}
+.admin-result--error { background: #ff00001a; }
+
+
 
 /* Боковое меню */
 

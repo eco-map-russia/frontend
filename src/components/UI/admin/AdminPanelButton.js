@@ -1,4 +1,4 @@
-import AdminPanelIcon from '../../assets/images/sidebarIcons/Admin-panel-icon.svg';
+import AdminPanelIcon from '../../../assets/images/sidebarIcons/Admin-panel-icon.svg';
 
 function MapFilterButton(props) {
   return (
