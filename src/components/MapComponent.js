@@ -256,6 +256,7 @@ function MapComponent() {
   // const didMountRef = useRef(false); // Чтобы не сработал useEffect при первом рендере
   const omRef = useRef(null); // ObjectManager для точек
   const regionCollectionRef = useRef(null);
+  const regionDetailsAbortRef = useRef(null); // для деталей региона
   //const waterLayerRef = useRef(null); // хранит geoQuery результата для воды
 
   /* ========================= Профиль пользователя (для админа) ========================= */
@@ -684,22 +685,46 @@ function MapComponent() {
     );
   };
 
-  /* Обработка выбранного региона */ const regionInfoDisplayHandler = (regionId) => {
+  /* Обработка выбранного региона */
+  const regionInfoDisplayHandler = useCallback(async (regionId) => {
     console.log('Выбран регион! id:', regionId);
-  };
-  const searchSelectHandler = useCallback((item) => {
-    console.log('Выбрано в MapComponent:', item); // лог из родителя
 
-    // приблизить карту к найденному объекту
-    if (mapRef.current && item?.lat != null && item?.lon != null) {
-      const center = [item.lon, item.lat];
-      const zoom = item.type === 'city' ? 10 : 6;
-      mapRef.current.setCenter(center, zoom, { duration: 300 });
+    // отменяем предыдущий запрос, если он ещё не завершился
+    if (regionDetailsAbortRef.current) {
+      regionDetailsAbortRef.current.abort();
     }
-    if (item?.type === 'region') {
-      regionInfoDisplayHandler(item.id);
+    const controller = new AbortController();
+    regionDetailsAbortRef.current = controller;
+
+    try {
+      // baseURL уже '/api/v1', поэтому путь без префикса
+      const { data } = await http.get(`/regions/${regionId}`, { signal: controller.signal });
+      console.log('Детальная информация о регионе:', data);
+      // здесь позже можно положить data в стейт/сайдбар и т.п.
+    } catch (e) {
+      if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError')
+        return;
+      console.error('Не удалось получить детали региона:', e);
     }
   }, []);
+
+  const searchSelectHandler = useCallback(
+    (item) => {
+      console.log('Выбрано в MapComponent:', item);
+
+      if (mapRef.current && item?.lat != null && item?.lon != null) {
+        const center = [item.lon, item.lat];
+        const zoom = item.type === 'city' ? 10 : 6;
+        mapRef.current.setCenter(center, zoom, { duration: 300 });
+      }
+
+      if (item?.type === 'region') {
+        // отделяем от текущего стека, чтобы анимация зума не страдала
+        setTimeout(() => regionInfoDisplayHandler(item.id), 0);
+      }
+    },
+    [regionInfoDisplayHandler],
+  );
 
   return (
     <YMaps query={{ apikey: config.YANDEX_MAP_API_KEY, lang: 'ru_RU', coordorder: 'longlat' }}>
