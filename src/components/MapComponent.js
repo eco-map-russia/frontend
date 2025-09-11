@@ -684,6 +684,18 @@ function MapComponent() {
     );
   };
 
+  const searchSelectHandler = useCallback((item) => {
+    console.log('Выбрано в MapComponent:', item); // лог из родителя
+
+    // опционально — приблизить карту к найденному объекту
+    if (mapRef.current && item?.lat != null && item?.lon != null) {
+      const center = [item.lon, item.lat];
+      const zoom = item.type === 'city' ? 10 : 6;
+      mapRef.current.setCenter(center, zoom, { duration: 300 });
+      // или: mapRef.current.panTo(center, { flying: true, duration: 300 });
+    }
+  }, []);
+
   return (
     <YMaps query={{ apikey: config.YANDEX_MAP_API_KEY, lang: 'ru_RU', coordorder: 'longlat' }}>
       <div className="map-container">
@@ -734,7 +746,7 @@ function MapComponent() {
           )}
         </Map>
       </div>
-      <MapSearchBar />
+      <MapSearchBar onSelect={searchSelectHandler} />
       <MapFilter />
       {isLoggedIn && profileStatus === 'succeeded' && isAdmin && <AdminPanel />}
       <SideBar />

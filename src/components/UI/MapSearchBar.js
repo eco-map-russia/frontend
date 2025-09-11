@@ -5,7 +5,7 @@ import { http } from '../../api/http'; // скорректируйте путь,
 const DEBOUNCE_MS = 1000;
 const MIN_LEN = 2;
 
-export default function MapSearchBar({ onSelect }) {
+function MapSearchBar(props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -69,10 +69,10 @@ export default function MapSearchBar({ onSelect }) {
   };
 
   const handleSelect = (item) => {
-    console.log('Выбрано:', item); // требование шага 1
+    console.log('Выбрано (в комп. строки):', item); // требование шага 1
     setOpen(false);
     // опционально отдать наверх (для зума карты/запросов)
-    if (onSelect) onSelect(item);
+    if (props.onSelect) props.onSelect(item);
   };
 
   return (
@@ -120,3 +120,5 @@ export default function MapSearchBar({ onSelect }) {
     </div>
   );
 }
+
+export default MapSearchBar;
