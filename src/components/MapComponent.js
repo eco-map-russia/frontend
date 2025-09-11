@@ -684,15 +684,20 @@ function MapComponent() {
     );
   };
 
+  /* Обработка выбранного региона */ const regionInfoDisplayHandler = (regionId) => {
+    console.log('Выбран регион! id:', regionId);
+  };
   const searchSelectHandler = useCallback((item) => {
     console.log('Выбрано в MapComponent:', item); // лог из родителя
 
-    // опционально — приблизить карту к найденному объекту
+    // приблизить карту к найденному объекту
     if (mapRef.current && item?.lat != null && item?.lon != null) {
       const center = [item.lon, item.lat];
       const zoom = item.type === 'city' ? 10 : 6;
       mapRef.current.setCenter(center, zoom, { duration: 300 });
-      // или: mapRef.current.panTo(center, { flying: true, duration: 300 });
+    }
+    if (item?.type === 'region') {
+      regionInfoDisplayHandler(item.id);
     }
   }, []);
 

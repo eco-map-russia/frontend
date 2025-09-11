@@ -69,7 +69,6 @@ function MapSearchBar(props) {
   };
 
   const handleSelect = (item) => {
-    console.log('Выбрано (в комп. строки):', item); // требование шага 1
     setOpen(false);
     // опционально отдать наверх (для зума карты/запросов)
     if (props.onSelect) props.onSelect(item);
