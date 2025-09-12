@@ -10,6 +10,7 @@ import { selectActiveFilter } from '../store/filter-slice';
 import { fetchProfile, selectIsAdmin, selectProfile } from '../store/user-profile-slice';
 
 import MapSearchBar from './UI/MapSearchBar';
+import RegionInfoModal from './UI/RegionInfoModal';
 import MapFilter from './UI/MapFilter';
 import AdminPanel from './UI/admin/AdminPanel';
 import SideBar from './UI/SideBar';
@@ -244,6 +245,11 @@ function formatDate(iso) {
 function MapComponent() {
   const [mapReady, setMapReady] = useState(false);
   const [pointsFC, setPointsFC] = useState(null);
+  // состояние для деталей региона
+  const [regionDetails, setRegionDetails] = useState(null);
+  const [regionModalOpen, setRegionModalOpen] = useState(false);
+  const [regionLoading, setRegionLoading] = useState(false);
+  const [regionError, setRegionError] = useState(null);
   const dispatch = useDispatch();
   const { items: regions, status, error } = useSelector((s) => s.regions);
   const activeFilter = useSelector(selectActiveFilter);
@@ -699,28 +705,53 @@ function MapComponent() {
     try {
       // baseURL уже '/api/v1', поэтому путь без префикса
       const { data } = await http.get(`/regions/${regionId}`, { signal: controller.signal });
+      setRegionDetails(data);
       console.log('Детальная информация о регионе:', data);
       // здесь позже можно положить data в стейт/сайдбар и т.п.
     } catch (e) {
       if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError')
         return;
       console.error('Не удалось получить детали региона:', e);
+      setRegionError('Не удалось загрузить данные региона');
+    } finally {
+      setRegionLoading(false);
     }
   }, []);
 
   const searchSelectHandler = useCallback(
     (item) => {
-      console.log('Выбрано в MapComponent:', item);
+      if (!mapRef.current) return;
 
-      if (mapRef.current && item?.lat != null && item?.lon != null) {
+      // 1) перемещение камеры
+      if (item?.lat != null && item?.lon != null) {
         const center = [item.lon, item.lat];
-        const zoom = item.type === 'city' ? 10 : 6;
-        mapRef.current.setCenter(center, zoom, { duration: 300 });
-      }
+        const z = item.type === 'city' ? 10 : 6;
 
-      if (item?.type === 'region') {
-        // отделяем от текущего стека, чтобы анимация зума не страдала
-        setTimeout(() => regionInfoDisplayHandler(item.id), 0);
+        const map = mapRef.current;
+        // panTo — анимированный перелёт (возвращает vow.Promise)
+        map
+          .panTo(center, { flying: true, duration: 300 })
+          .then(() => map.setZoom(z, { duration: 200 }))
+          .then(() => {
+            // 2) только теперь — модалка и загрузка
+            if (item?.type === 'region') {
+              setRegionLoading(true);
+              setRegionError(null);
+              setRegionDetails(null);
+              setRegionModalOpen(true);
+              regionInfoDisplayHandler(item.id);
+            }
+          })
+          .catch(() => {
+            // даже если анимация сорвалась — всё равно покажем модалку
+            if (item?.type === 'region') {
+              setRegionLoading(true);
+              setRegionError(null);
+              setRegionDetails(null);
+              setRegionModalOpen(true);
+              regionInfoDisplayHandler(item.id);
+            }
+          });
       }
     },
     [regionInfoDisplayHandler],
@@ -786,6 +817,13 @@ function MapComponent() {
         onZoomOut={zoomOutHandler}
       />
       <MapCalendar onDateChange={dateChangeHandler} />
+      <RegionInfoModal
+        open={regionModalOpen}
+        onClose={() => setRegionModalOpen(false)}
+        region={regionDetails}
+        loading={regionLoading}
+        error={regionError}
+      />
     </YMaps>
   );
 }

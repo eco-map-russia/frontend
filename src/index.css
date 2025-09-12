@@ -179,6 +179,34 @@ box-sizing: border-box;
 .map-search-suggest__name { display: block; font-weight: 600; color: #0f172a; }
 .map-search-suggest__meta { display: block; opacity: 0.7; font-size: 12px; margin-top: 2px; }
 
+/* Модальное окно с информацией о регионе */
+
+.rim-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15,23,42,0.35);
+  display: flex; justify-content: center; align-items: flex-start;
+  padding-top: 72px; /* чтобы не перекрывать строку поиска */
+}
+
+.rim-modal {
+  width: min(720px, 92vw);
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;
+}
+
+.rim-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.rim-close { border: 0; background: transparent; cursor: pointer; font-size: 22px; }
+.rim-body { padding: 16px 20px; max-height: 60vh; overflow: auto; }
+.rim-section { margin-bottom: 14px; }
+.rim-section h4 { margin: 0 0 6px; font-size: 14px; opacity: .7; }
+.rim-list { margin: 0; padding-left: 18px; }
+.rim-muted { opacity: .75; font-size: 13px; }
+.rim-error { color: #c00; }
+
 
 /* Фильтр карты */
 
