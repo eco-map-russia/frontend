@@ -741,6 +741,51 @@ box-sizing: border-box;
   background: #fff;
 }
 
+/* Строка: имя + кнопка удаления */
+.fav-modal__row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+/* Кликабельная «плашка» с названием */
+.fav-modal__item {
+  flex: 1;
+  text-align: left;
+  border: 1px solid #eee;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+.fav-modal__item:hover { background: #f0f0f0; }
+.fav-modal__item:active { transform: translateY(1px); }
+.fav-modal__item:disabled { opacity: .6; cursor: default; }
+
+/* Красная кнопка удаления справа */
+.fav-modal__delete {
+  border: 1px solid #ef9a9a;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: 10px;
+  padding: 0 10px;
+  min-width: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: filter .15s, transform .05s, background .15s, color .15s, border-color .15s;
+}
+.fav-modal__delete:hover { background: #ffcdd2; }
+.fav-modal__delete:active { transform: translateY(1px); }
+.fav-modal__delete:disabled {
+  opacity: .6;
+  cursor: default;
+  filter: grayscale(0.2);
+}
+
 
 
 /* ============================== */
