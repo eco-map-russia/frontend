@@ -612,6 +612,134 @@ box-sizing: border-box;
 
 /* Календарь */
 
+/* ============================== */
+
+/* Модальное окно избранных регионов */
+
+/* Полноэкранный бэкдроп, всегда фиксирован к окну */
+.fav-modal__backdrop {
+  position: fixed;
+  inset: 0; /* top/right/bottom/left: 0 */
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;           /* выше карты/сайдбара */
+  display: flex;
+  align-items: center;     /* по вертикали по центру */
+  justify-content: center; /* по горизонтали по центру */
+}
+
+/* Карточка модалки */
+.fav-modal {
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Шапка */
+.fav-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+}
+.fav-modal__header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.fav-modal__close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* Тело */
+.fav-modal__body {
+  padding: 12px 16px;
+  overflow: auto;
+}
+.fav-modal__state {
+  color: #666;
+  padding: 12px 0;
+}
+.fav-modal__error {
+  color: #c0392b;
+  padding: 12px 0;
+}
+
+/* Список */
+.fav-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fav-modal__item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #eee;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+.fav-modal__item:hover {
+  background: #f0f0f0;
+}
+.fav-modal__item:active {
+  transform: translateY(1px);
+}
+
+/* Подвал */
+.fav-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+}
+.fav-modal__pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fav-modal__pager button {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.fav-modal__pager button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.fav-modal__page {
+  font-size: 14px;
+  color: #444;
+}
+.fav-modal__size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.fav-modal__size select {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: #fff;
+}
 
 
 

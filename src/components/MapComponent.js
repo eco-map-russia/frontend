@@ -15,6 +15,7 @@ import MapFilter from './UI/MapFilter';
 import AdminPanel from './UI/admin/AdminPanel';
 import SideBar from './UI/SideBar';
 import NavigateButtons from './UI/NavigateButtons';
+import FavoritesModal from './UI/FavoritesModal';
 import MapCalendar from './UI/MapCalendar';
 
 const FILTER_TYPE_BY_ID = {
@@ -250,6 +251,8 @@ function MapComponent() {
   const [regionModalOpen, setRegionModalOpen] = useState(false);
   const [regionLoading, setRegionLoading] = useState(false);
   const [regionError, setRegionError] = useState(null);
+  const [isFavOpen, setFavOpen] = useState(false); // для модалки избранных регионов
+
   const dispatch = useDispatch();
   const { items: regions, status, error } = useSelector((s) => s.regions);
   const activeFilter = useSelector(selectActiveFilter);
@@ -761,6 +764,7 @@ function MapComponent() {
 
   const favoriteRegionsHandler = () => {
     console.log('Показать избранные регионы');
+    setFavOpen(true);
   };
 
   return (
@@ -830,6 +834,7 @@ function MapComponent() {
         loading={regionLoading}
         error={regionError}
       />
+      <FavoritesModal open={isFavOpen} onClose={() => setFavOpen(false)} />
     </YMaps>
   );
 }

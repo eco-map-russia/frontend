@@ -55,11 +55,9 @@ function Sidebar(props) {
             <img className="sidebar__icon" src={analyticsIcon} alt="T Банк" />
             <span className="sidebar__label">Личный кабинет</span>
           </button>
-          <button className="sidebar__btn">
+          <button className="sidebar__btn" onClick={props.onFavoriteRegions}>
             <img className="sidebar__icon" src={inboxIcon} alt="T Банк" />
-            <span className="sidebar__label" onClick={props.onFavoriteRegions}>
-              Избранные регионы
-            </span>
+            <span className="sidebar__label">Избранные регионы</span>
           </button>
           <button className="sidebar__btn">
             <img className="sidebar__icon" src={calendarIcon} alt="T Банк" />
