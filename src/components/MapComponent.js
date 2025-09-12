@@ -757,6 +757,12 @@ function MapComponent() {
     [regionInfoDisplayHandler],
   );
 
+  /* Избранные регионы */
+
+  const favoriteRegionsHandler = () => {
+    console.log('Показать избранные регионы');
+  };
+
   return (
     <YMaps query={{ apikey: config.YANDEX_MAP_API_KEY, lang: 'ru_RU', coordorder: 'longlat' }}>
       <div className="map-container">
@@ -810,7 +816,7 @@ function MapComponent() {
       <MapSearchBar onSelect={searchSelectHandler} />
       <MapFilter />
       {isLoggedIn && profileStatus === 'succeeded' && isAdmin && <AdminPanel />}
-      <SideBar />
+      <SideBar onFavoriteRegions={favoriteRegionsHandler} />
       <NavigateButtons
         onZoomToUser={zoomToUserHandler}
         onZoomIn={zoomInHandler}

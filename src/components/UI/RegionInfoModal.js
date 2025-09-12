@@ -65,6 +65,8 @@ export default function RegionInfoModal({ open, onClose, region, loading, error 
                 </ul>
               )}
             </div>
+
+            <button>Добавить регион в избранное</button>
           </div>
         )}
       </div>

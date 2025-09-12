@@ -10,7 +10,7 @@ import reportsIcon from '../../assets/images/sidebarIcons/Reports_4.svg';
 import helpCircleIcon from '../../assets/images/sidebarIcons/Help-Circle_5.svg';
 import logOutIcon from '../../assets/images/sidebarIcons/Log-out_6.svg';
 
-function Sidebar() {
+function Sidebar(props) {
   const [expanded, setExpanded] = useState(false);
   const dispatch = useDispatch();
   const { user, status } = useSelector((s) => s.profile);
@@ -57,9 +57,8 @@ function Sidebar() {
           </button>
           <button className="sidebar__btn">
             <img className="sidebar__icon" src={inboxIcon} alt="T Банк" />
-            <span className="sidebar__label">Избранные регионы</span>
-            <span className="sidebar__caret" aria-hidden="true">
-              ▾
+            <span className="sidebar__label" onClick={props.onFavoriteRegions}>
+              Избранные регионы
             </span>
           </button>
           <button className="sidebar__btn">
