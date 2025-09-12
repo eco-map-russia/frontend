@@ -8,6 +8,11 @@ import { http } from '../api/http';
 import { fetchRegions } from '../store/regions-slice'; // импорт thunk
 import { selectActiveFilter } from '../store/filter-slice';
 import { fetchProfile, selectIsAdmin, selectProfile } from '../store/user-profile-slice';
+import {
+  addFavoriteRegion,
+  addFavoriteRegionLocal,
+  selectFavorites,
+} from '../store/favorites-slice';
 
 import MapSearchBar from './UI/MapSearchBar';
 import RegionInfoModal from './UI/RegionInfoModal';
@@ -259,6 +264,7 @@ function MapComponent() {
   const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
   const { status: profileStatus } = useSelector(selectProfile);
   const isAdmin = useSelector(selectIsAdmin);
+  const { addingIds, status: favStatus } = useSelector(selectFavorites); // для кнопки добавления в избранное
 
   const mapRef = useRef(null);
   const polylabelerRef = useRef(null);
@@ -762,10 +768,53 @@ function MapComponent() {
 
   /* Избранные регионы */
 
-  const favoriteRegionsHandler = () => {
-    console.log('Показать избранные регионы');
-    setFavOpen(true);
-  };
+  const favoriteRegionsHandler = useCallback(() => {
+    setFavOpen(true); // открываем модалку избранных
+  }, []);
+
+  const addToFavoritesHandler = useCallback(async () => {
+    const r = regionDetails;
+    if (!r) return;
+
+    // ✅ Надёжно получаем идентификатор
+    const id = r.id ?? r.regionId;
+    if (!id) {
+      console.warn('regionDetails не содержит id/regionId');
+      return;
+    }
+
+    // Для локальной вставки в открытую модалку
+    const name = r.name;
+    const lat = r.center?.lat;
+    const lon = r.center?.lon;
+
+    try {
+      // 1) шлём POST
+      await dispatch(addFavoriteRegion({ id })).unwrap();
+
+      // 2) если список уже подгружен (favStatus === 'succeeded'),
+      //    вставим запись локально, чтобы пользователь увидел её сразу
+      if (favStatus === 'succeeded') {
+        dispatch(
+          addFavoriteRegionLocal({
+            id,
+            name,
+            coordinatesResponseDto: lat != null && lon != null ? { lat, lon } : undefined,
+          }),
+        );
+      }
+
+      // (опционально) если хотите точную синхронизацию с сервером:
+      // if (isFavOpen) dispatch(fetchFavoriteRegions({ page: 0, size: 10 }));
+    } catch (e) {
+      // Ошибку слайс уже положит в favorites.error; при желании можно всплывашку
+      console.error('Не удалось добавить в избранное:', e);
+    }
+  }, [dispatch, regionDetails, favStatus]);
+
+  const isAddingThisRegion =
+    !!(regionDetails?.id && addingIds[regionDetails.id]) ||
+    !!(regionDetails?.regionId && addingIds[regionDetails.regionId]);
 
   return (
     <YMaps query={{ apikey: config.YANDEX_MAP_API_KEY, lang: 'ru_RU', coordorder: 'longlat' }}>
@@ -833,6 +882,8 @@ function MapComponent() {
         region={regionDetails}
         loading={regionLoading}
         error={regionError}
+        onAddFavorite={addToFavoritesHandler}
+        addInProgress={isAddingThisRegion}
       />
       <FavoritesModal open={isFavOpen} onClose={() => setFavOpen(false)} />
     </YMaps>

@@ -14,7 +14,20 @@ export const fetchFavoriteRegions = createAsyncThunk(
   },
 );
 
-// ⬇️ НОВОЕ: удаление региона
+export const addFavoriteRegion = createAsyncThunk(
+  'favorites/addFavoriteRegion',
+  async ({ id }, { rejectWithValue }) => {
+    try {
+      // POST /api/v1/favorite-regions/{regionId}
+      await http.post(`/favorite-regions/${encodeURIComponent(id)}`);
+      return { id };
+    } catch (err) {
+      return rejectWithValue(err.response?.data || 'Не удалось добавить регион в избранное');
+    }
+  },
+);
+
+// удаление региона
 export const deleteFavoriteRegion = createAsyncThunk(
   'favorites/deleteFavoriteRegion',
   async ({ id }, { getState, dispatch, rejectWithValue }) => {
@@ -51,8 +64,10 @@ const initialState = {
   status: 'idle',
   error: null,
 
-  // ⬇️ НОВОЕ: флаги удаления по id
+  // ⬇️  флаги для отслеживания процессов добавления/удаления
   deletingIds: {}, // { [id]: true }
+  addingIds: {}, // { [id]: true } — какие регионы сейчас добавляются
+  lastAddedId: null, // id последнего успешно добавленного (опционально для UI)
 };
 
 const favoritesSlice = createSlice({
@@ -68,7 +83,7 @@ const favoritesSlice = createSlice({
     },
 
     addFavoriteRegionLocal(state, action) {
-      const r = action.payload;
+      const r = action.payload; // {id, name, coordinatesResponseDto:{lat,lon}}
       if (!state.items.some((x) => x.id === r.id)) {
         state.items.unshift(r);
         state.totalElements += 1;
@@ -141,6 +156,26 @@ const favoritesSlice = createSlice({
         const id = action.meta.arg?.id;
         if (id) delete state.deletingIds[id];
         state.error = action.payload || 'Не удалось удалить регион';
+      })
+
+      // add
+      .addCase(addFavoriteRegion.pending, (state, action) => {
+        const id = action.meta.arg?.id;
+        if (id) state.addingIds[id] = true;
+      })
+      .addCase(addFavoriteRegion.fulfilled, (state, action) => {
+        const id = action.payload?.id;
+        if (id) {
+          delete state.addingIds[id];
+          state.lastAddedId = id;
+          // Опционально: если вы хотите сразу отразить это в открытой модалке списка,
+          // можно добавить state.items.unshift({...}), но часто хватает просто POST'а.
+        }
+      })
+      .addCase(addFavoriteRegion.rejected, (state, action) => {
+        const id = action.meta.arg?.id;
+        if (id) delete state.addingIds[id];
+        state.error = action.payload || 'Не удалось добавить регион в избранное';
       });
   },
 });

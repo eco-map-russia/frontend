@@ -1,7 +1,15 @@
 // components/UI/modals/RegionInfoModal.jsx
 import { useEffect } from 'react';
 
-export default function RegionInfoModal({ open, onClose, region, loading, error }) {
+export default function RegionInfoModal({
+  open,
+  onClose,
+  region,
+  loading,
+  error,
+  onAddFavorite,
+  addInProgress = false,
+}) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     if (open) document.addEventListener('keydown', onKey);
@@ -66,7 +74,13 @@ export default function RegionInfoModal({ open, onClose, region, loading, error 
               )}
             </div>
 
-            <button>Добавить регион в избранное</button>
+            <button
+              onClick={() => onAddFavorite?.()}
+              disabled={addInProgress}
+              title="Добавить регион в избранное"
+            >
+              {addInProgress ? 'Добавляю…' : 'Добавить регион в избранное'}
+            </button>
           </div>
         )}
       </div>
