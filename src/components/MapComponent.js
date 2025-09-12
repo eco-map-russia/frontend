@@ -812,6 +812,96 @@ function MapComponent() {
     }
   }, [dispatch, regionDetails, favStatus]);
 
+  function flyMapTo(map, center, zoom) {
+    if (!map || !center) return Promise.resolve();
+
+    // 1) Остановим любые текущие анимации
+    try {
+      map.action?.stop();
+    } catch {}
+
+    // 2) Надёжно: центр + зум одной командой
+    try {
+      map.setCenter(center, zoom, { checkZoomRange: true });
+      // setCenter не всегда возвращает промис — выровняем сигнатуру
+      return Promise.resolve();
+    } catch {
+      // Fallback: если вдруг setCenter недоступен, используем panTo + setZoom
+      const p = map.panTo(center, { delay: 0, duration: 300 });
+      return p && typeof p.then === 'function'
+        ? p.then(() => map.setZoom(zoom, { duration: 200 }))
+        : Promise.resolve(map.setZoom(zoom));
+    }
+  }
+
+  // helper: аккуратно свопаем координаты из избранного
+  function getNormalizedCenterFromFavorite(fav) {
+    const rawLat = fav?.coordinatesResponseDto?.lat;
+    const rawLon = fav?.coordinatesResponseDto?.lon;
+    if (rawLat == null || rawLon == null) return null;
+
+    // В ответе любимых местами перепутаны lat/lon → нормализуем
+    const lat = rawLon; // было lon
+    const lon = rawLat; // было lat
+    return [lon, lat]; // coordorder: 'longlat' → [lon, lat]
+  }
+
+  // helper: получаем regionId по имени из стора regions
+  function resolveRegionIdFromFavoriteByName(fav, regions) {
+    const favName = (fav?.name || '').trim().toLowerCase();
+    if (!favName || !Array.isArray(regions)) return null;
+    const match = regions.find((r) => (r?.name || '').trim().toLowerCase() === favName);
+    return match?.id ?? match?.regionId ?? null;
+  }
+
+  const handleSelectFavorite = useCallback(
+    (fav) => {
+      if (!fav) return;
+
+      // закрываем модалку избранных
+      setFavOpen(false);
+
+      // 1) нормализуем координаты
+      const center = getNormalizedCenterFromFavorite(fav);
+
+      // 2) находим корректный regionId
+      const resolvedRegionId =
+        resolveRegionIdFromFavoriteByName(fav, regions) ||
+        fav.regionId || // если бэк начнёт отдавать regionId — используем его
+        null;
+
+      // функция открытия модалки и загрузки деталей
+      const openRegionDetails = (regionIdForFetch) => {
+        setRegionLoading(true);
+        setRegionError(null);
+        setRegionDetails(null);
+        setRegionModalOpen(true);
+
+        // Если не смогли найти корректный regionId — не зовём /regions/{id}
+        // (иначе словим 404), просто показываем модалку без деталей
+        if (regionIdForFetch) {
+          regionInfoDisplayHandler(regionIdForFetch);
+        } else {
+          setRegionLoading(false);
+          setRegionError('Не удалось сопоставить регион (нет идентификатора)');
+        }
+      };
+
+      // Если карта/координаты недоступны — просто откроем детали
+      if (!mapRef.current || !center) {
+        openRegionDetails(resolvedRegionId);
+        return;
+      }
+
+      // 3) перелёт + открытие модалки с корректным regionId
+
+      const map = mapRef.current;
+      const z = 6;
+      flyMapTo(map, center, z).finally(() => openRegionDetails(resolvedRegionId));
+    },
+    [regions, regionInfoDisplayHandler],
+  );
+
   const isAddingThisRegion =
     !!(regionDetails?.id && addingIds[regionDetails.id]) ||
     !!(regionDetails?.regionId && addingIds[regionDetails.regionId]);
@@ -885,7 +975,11 @@ function MapComponent() {
         onAddFavorite={addToFavoritesHandler}
         addInProgress={isAddingThisRegion}
       />
-      <FavoritesModal open={isFavOpen} onClose={() => setFavOpen(false)} />
+      <FavoritesModal
+        open={isFavOpen}
+        onClose={() => setFavOpen(false)}
+        onSelect={handleSelectFavorite}
+      />
     </YMaps>
   );
 }
