@@ -14,18 +14,41 @@ export const fetchProfile = createAsyncThunk(
   },
 );
 
+export const updateProfile = createAsyncThunk(
+  'profile/updateProfile',
+  /**
+   * payload: { firstName, lastName, phone }
+   */
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { data } = await http.patch('/me', payload); // PATCH /api/v1/me
+      // сервер может вернуть либо весь профиль, либо только изменённые поля
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || 'Ошибка обновления профиля');
+    }
+  },
+);
+
 const profileSlice = createSlice({
   name: 'profile',
   initialState: {
     user: null, // данные профиля
     status: 'idle', // idle | loading | succeeded | failed
     error: null,
+
+    updateStatus: 'idle', // загрузка обновления
+    updateError: null,
   },
   reducers: {
     clearProfile: (state) => {
       state.user = null;
       state.status = 'idle';
       state.error = null;
+    },
+    clearUpdateState: (state) => {
+      state.updateStatus = 'idle';
+      state.updateError = null;
     },
   },
   extraReducers: (builder) => {
@@ -41,6 +64,22 @@ const profileSlice = createSlice({
       .addCase(fetchProfile.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
+      })
+
+      // updateProfile
+      .addCase(updateProfile.pending, (state) => {
+        state.updateStatus = 'loading';
+        state.updateError = null;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.updateStatus = 'succeeded';
+        const patch = action.payload;
+        // на всякий случай аккуратно мержим
+        state.user = { ...(state.user || {}), ...(patch || {}) };
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
+        state.updateStatus = 'failed';
+        state.updateError = action.payload;
       });
   },
 });
@@ -62,5 +101,5 @@ const hasAdminRole = (roles) => {
 export const selectProfile = (state) => state.profile;
 export const selectIsAdmin = (state) => hasAdminRole(state.profile.user?.roles);
 
-export const { clearProfile } = profileSlice.actions;
+export const { clearProfile, clearUpdateState } = profileSlice.actions;
 export default profileSlice.reducer;

@@ -34,7 +34,7 @@ function Sidebar(props) {
           {/* Имя пользователя (видно только в развернутом) */}
           <div className="sidebar__user">
             <div className="sidebar__user-name">
-              <a href="/login">{status === 'loading' ? '' : fullName || '—'}</a>
+              <a href="/login">{status === 'loading' ? '' : fullName || 'Войти'}</a>
             </div>
           </div>
 
@@ -51,10 +51,10 @@ function Sidebar(props) {
 
         {/* Основные кнопки-иконки */}
         <nav className="sidebar__menu">
-          <button className="sidebar__btn">
+          <a className="sidebar__btn" href="/profile">
             <img className="sidebar__icon" src={analyticsIcon} alt="T Банк" />
             <span className="sidebar__label">Личный кабинет</span>
-          </button>
+          </a>
           <button className="sidebar__btn" onClick={props.onFavoriteRegions}>
             <img className="sidebar__icon" src={inboxIcon} alt="T Банк" />
             <span className="sidebar__label">Избранные регионы</span>

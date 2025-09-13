@@ -539,7 +539,7 @@ box-sizing: border-box;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  
+  text-decoration: none;
 }
 
 .sidebar__btn:hover {
@@ -932,6 +932,7 @@ box-sizing: border-box;
 
 .login-btn {
   padding: 13px 0;
+  width: 100%;
   border-radius: 9px;
   background: #FFDD2D;
   color: #262c32;
@@ -962,4 +963,69 @@ box-sizing: border-box;
   margin-left: 4px;
   cursor: pointer;
   display: inline;
+}
+
+/* ============ UserProfile ============ */
+.user-info-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 14px;
+  text-align: center;
+}
+
+.user-fullname {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #262c32;
+}
+
+.user-phone {
+  margin: 12px 0 0 0;
+  font-size: 1.5rem;
+  color: #848b97;
+}
+
+.profile-success {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  margin: 6px 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
+  font-size: 0.96rem;
+}
+
+.profile-error {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  margin: 0 0 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  color: #b00020;
+  font-size: 0.96rem;
+}
+
+/* Фиксированная кнопка "На карту" слева сверху */
+.login-btn.back-btn-fixed {
+  position: fixed;
+  max-width: 100px;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+
+  /* чуть больше горизонтальный отступ, чем у обычной .login-btn */
+  padding: 10px 16px;
+  text-decoration: none;      /* если используем <Link> */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
