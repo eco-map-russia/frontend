@@ -208,6 +208,19 @@ box-sizing: border-box;
 .rim-error { color: #c00; }
 
 
+/* где-нибудь в вашем rim.css */
+.rim-comments-list { display: grid; gap: 12px; margin: 8px 0 16px; padding: 0; list-style: none; }
+.rim-comment { padding: 10px 12px; border: 1px solid #e6e6e6; border-radius: 10px; background: #fff; }
+.rim-comment-header { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.rim-comment-author { font-weight: 600; }
+.rim-comment-date { opacity: .6; font-size: 12px; }
+.rim-comment-text { margin-top: 6px; white-space: pre-wrap; }
+.rim-comment-form { display: grid; gap: 8px; margin-top: 10px; }
+.rim-comment-form textarea { width: 100%; resize: vertical; padding: 8px 10px; border-radius: 8px; border: 1px solid #ddd; }
+.rim-btn-more { margin: 6px 0 2px; }
+
+
+
 /* Фильтр карты */
 
 /* общий обёртчик кнопки и меню */

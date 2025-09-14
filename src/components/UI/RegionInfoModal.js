@@ -1,5 +1,5 @@
-// components/UI/modals/RegionInfoModal.jsx
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { http } from '../../api/http';
 
 export default function RegionInfoModal({
@@ -11,14 +11,43 @@ export default function RegionInfoModal({
   onAddFavorite,
   addInProgress = false,
 }) {
+  console.log('RegionInfoModal from /UI/modals mounted');
+  // текущий пользователь (для отображения своего коммента сразу после POST — на бэке тоже вернётся)
+  const currentUser = useSelector((s) => s.profile?.user);
+  const regionId = region?.id ?? region?.regionId ?? region?.code ?? null; // нормализуем идентификатор региона
+
   const [air, setAir] = useState({ aqi: null, loading: false, error: null });
   const airAbortRef = useRef(null);
+
+  // комментарии
+  const [comments, setComments] = useState([]);
+  const [commentsPage, setCommentsPage] = useState(0);
+  const [commentsSize] = useState(10);
+  const [commentsHasMore, setCommentsHasMore] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState(null);
+  const commentsAbortRef = useRef(null);
+
+  // форма отправки
+  const [newComment, setNewComment] = useState('');
+  const [sendLoading, setSendLoading] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     if (open) document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // утилита форматирования даты
+  const fmt = (iso) => {
+    try {
+      const d = new Date(iso);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch {
+      return iso ?? '';
+    }
+  };
 
   // грузим качество воздуха, когда модалка открылась и известны координаты
   useEffect(() => {
@@ -32,7 +61,7 @@ export default function RegionInfoModal({
     setAir({ aqi: null, loading: true, error: null });
     http
       .get('/air-quality/current', {
-        params: { lat: region.center.lat, lon: region.center.lon },
+        params: { lat: region.center.lon, lon: region.center.lat },
         signal: controller.signal,
       })
       .then(({ data }) => {
@@ -48,6 +77,64 @@ export default function RegionInfoModal({
 
     return () => controller.abort();
   }, [open, region?.center?.lat, region?.center?.lon]);
+
+  // загрузка комментариев (первая страница при открытии/смене региона)
+  const fetchComments = useCallback(
+    (page = 0, append = false) => {
+      if (!open || !regionId) return;
+      if (commentsAbortRef.current) commentsAbortRef.current.abort();
+      const controller = new AbortController();
+      commentsAbortRef.current = controller;
+      setCommentsLoading(true);
+      setCommentsError(null);
+      return http
+        .get(`/regions/${regionId}/comments`, {
+          params: { page, size: commentsSize, direction: 'desc' },
+          signal: controller.signal,
+        })
+        .then(({ data }) => {
+          const list = Array.isArray(data?.content) ? data.content : [];
+          setComments((prev) => (append ? [...prev, ...list] : list));
+          setCommentsPage(data?.number ?? page);
+          setCommentsHasMore(!(data?.last ?? true));
+        })
+        .catch((e) => {
+          if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError')
+            return;
+          setCommentsError('Не удалось загрузить комментарии');
+        })
+        .finally(() => setCommentsLoading(false));
+    },
+    [open, regionId, commentsSize],
+  );
+
+  useEffect(() => {
+    if (!open || !regionId) return;
+    // сбрасываем состояние и грузим первые комментарии
+    setComments([]);
+    setCommentsPage(0);
+    setCommentsHasMore(false);
+    setNewComment('');
+    fetchComments(0, false);
+    return () => commentsAbortRef.current?.abort();
+  }, [open, regionId, fetchComments]);
+
+  // отправка комментария
+  const submitComment = async () => {
+    if (!newComment.trim() || !regionId) return;
+    try {
+      setSendLoading(true);
+      await http.post(`/regions/${regionId}/comments`, { text: newComment.trim() });
+      setNewComment('');
+      // перезагружаем первую страницу, чтобы увидеть свой комментарий сверху
+      await fetchComments(0, false); // чтобы сразу увидеть свой коммент сверху
+    } catch (e) {
+      alert('Не удалось отправить комментарий. Попробуйте ещё раз.');
+    } finally {
+      setSendLoading(false);
+    }
+    console.log('Submit comment:', newComment);
+  };
 
   if (!open) return null;
 
@@ -75,7 +162,7 @@ export default function RegionInfoModal({
               {addInProgress ? 'Добавляю…' : 'Добавить регион в избранное'}
             </button>
             <div className="rim-section">
-              <b>Координаты центра:</b> {region?.center?.lat}, {region?.center?.lon}
+              <b>Координаты центра:</b> {region?.center?.lon}, {region?.center?.lat}
             </div>
 
             <div className="rim-section">
@@ -123,6 +210,59 @@ export default function RegionInfoModal({
                   ))}
                 </ul>
               )}
+            </div>
+
+            {/* КОММЕНТАРИИ */}
+            <div className="rim-section rim-comments">
+              <h4>Комментарии</h4>
+              {commentsLoading && !comments.length ? <div>Загрузка…</div> : null}
+              {commentsError ? <div className="rim-error">{commentsError}</div> : null}
+              {!commentsLoading && !commentsError && !comments.length ? (
+                <div className="rim-muted">Пока нет комментариев. Будьте первым!</div>
+              ) : null}
+
+              <ul className="rim-comments-list">
+                {comments.map((c) => (
+                  <li key={c.id} className="rim-comment">
+                    <div className="rim-comment-header">
+                      <b className="rim-comment-author">
+                        {c.username ||
+                          `${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}`.trim() ||
+                          'Пользователь'}
+                      </b>
+                      <span className="rim-comment-date">{fmt(c.createdAt)}</span>
+                    </div>
+                    <div className="rim-comment-text">{c.text}</div>
+                  </li>
+                ))}
+              </ul>
+
+              {commentsHasMore ? (
+                <button
+                  className="rim-btn-more"
+                  disabled={commentsLoading}
+                  onClick={() => fetchComments(commentsPage + 1, true)}
+                >
+                  {commentsLoading ? 'Загрузка…' : 'Показать ещё'}
+                </button>
+              ) : null}
+
+              {/* форма отправки */}
+              <div className="rim-comment-form">
+                <textarea
+                  rows={3}
+                  placeholder="Ваш комментарий..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={submitComment}
+                  disabled={sendLoading || !newComment.trim()}
+                >
+                  {sendLoading ? 'Отправка…' : 'Оставить комментарий'}
+                </button>
+              </div>
             </div>
           </div>
         )}
