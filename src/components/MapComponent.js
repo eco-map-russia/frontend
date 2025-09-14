@@ -122,7 +122,7 @@ const adaptRadiationPoints = makePointsAdaptor({
   getId: (p) => p.pointId,
   getName: (p) => p.pointName ?? 'Точка',
   // Внимание: в radiation — coordinatesResponseDto (нижний регистр)
-  getLonLat: (p) => [p.coordinatesResponseDto.lon, p.coordinatesResponseDto.lat],
+  getLonLat: (p) => [p.coordinatesResponseDto.lat, p.coordinatesResponseDto.lon],
   toProps: (p) => ({
     hintContent: `${p.pointName} • β: ${p.betaFallout}`,
     balloonContent: `

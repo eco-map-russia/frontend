@@ -207,8 +207,23 @@ box-sizing: border-box;
 .rim-muted { opacity: .75; font-size: 13px; }
 .rim-error { color: #c00; }
 
+/* График */
+/* встроенный календарь и график в модалке */
+.rim-air-history-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+}
+.rim-air-history-btn:hover { background: #f8fafc; }
 
-/* где-нибудь в вашем rim.css */
+.rim-air-history { display: grid; gap: 12px; margin-top: 10px; }
+.rim-calendar { border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px; background: #fff; }
+.rim-chart { width: 100%; height: 260px; }
+
+
+/* Комментарии */
 .rim-comments-list { display: grid; gap: 12px; margin: 8px 0 16px; padding: 0; list-style: none; }
 .rim-comment { padding: 10px 12px; border: 1px solid #e6e6e6; border-radius: 10px; background: #fff; }
 .rim-comment-header { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Calendar from 'react-calendar'; // npm install react-calendar
 import 'react-calendar/dist/Calendar.css';
-import './MapCalendar.css';
+//import './MapCalendar.css';
 
 function MapCalendar({ onDateChange }) {
   const [date, setDate] = useState(new Date());

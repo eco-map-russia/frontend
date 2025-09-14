@@ -2,6 +2,17 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { http } from '../../api/http';
 
+import Calendar from 'react-calendar';
+import {
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+
 export default function RegionInfoModal({
   open,
   onClose,
@@ -11,13 +22,20 @@ export default function RegionInfoModal({
   onAddFavorite,
   addInProgress = false,
 }) {
-  console.log('RegionInfoModal from /UI/modals mounted');
   // текущий пользователь (для отображения своего коммента сразу после POST — на бэке тоже вернётся)
   const currentUser = useSelector((s) => s.profile?.user);
   const regionId = region?.id ?? region?.regionId ?? region?.code ?? null; // нормализуем идентификатор региона
 
   const [air, setAir] = useState({ aqi: null, loading: false, error: null });
   const airAbortRef = useRef(null);
+
+  // --- История воздуха ---
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [range, setRange] = useState([null, null]); // [startDate, endDate]
+  const [histLoading, setHistLoading] = useState(false);
+  const [histError, setHistError] = useState(null);
+  const [histPoints, setHistPoints] = useState([]); // [{date:'2025-09-13', aqi: 42}, ...]
+  const histAbortRef = useRef(null);
 
   // комментарии
   const [comments, setComments] = useState([]);
@@ -48,6 +66,80 @@ export default function RegionInfoModal({
       return iso ?? '';
     }
   };
+  const fmtYmd = (d) => {
+    // YYYY-MM-DD без часовых поясов
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
+  /* Код графика */
+
+  // Сброс истории при смене региона/закрытии
+  useEffect(() => {
+    setHistoryOpen(false);
+    setRange([null, null]);
+    setHistPoints([]);
+    setHistError(null);
+    setHistLoading(false);
+    histAbortRef.current?.abort();
+  }, [regionId, open]);
+
+  const fetchHistorical = useCallback(
+    async (startDate, endDate) => {
+      if (!open || !region?.center?.lat || !region?.center?.lon) return;
+      // отменяем предыдущий запрос
+      if (histAbortRef.current) histAbortRef.current.abort();
+      const controller = new AbortController();
+      histAbortRef.current = controller;
+      setHistLoading(true);
+      setHistError(null);
+      try {
+        const { data } = await http.get('/air-historical', {
+          params: {
+            // ВАЖНО: у нас lat/lon в объекте перепутаны местами
+            lat: region.center.lon,
+            lon: region.center.lat,
+            startDate,
+            endDate,
+          },
+          signal: controller.signal,
+        });
+        // нормализуем: берём только дату и europeanAqi
+        const points = (Array.isArray(data) ? data : [])
+          .map((item) => ({
+            date: item?.airQualityHistoricalResponseDto?.date,
+            aqi: item?.airQualityHistoricalResponseDto?.europeanAqi ?? null,
+          }))
+          .filter((p) => p.date && p.aqi != null)
+          .sort((a, b) => (a.date < b.date ? -1 : 1));
+        setHistPoints(points);
+      } catch (e) {
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError')
+          return;
+        setHistError('Не удалось загрузить исторические данные');
+      } finally {
+        setHistLoading(false);
+      }
+    },
+    [open, region?.center?.lat, region?.center?.lon],
+  );
+
+  const onCalendarChange = (val) => {
+    // react-calendar с selectRange -> [startDate, endDate] или один Date
+    if (Array.isArray(val)) {
+      setRange(val);
+      const [s, e] = val;
+      if (s && e) {
+        const start = fmtYmd(s);
+        const end = fmtYmd(e);
+        fetchHistorical(start, end);
+      }
+    } else {
+      setRange([val, null]);
+    }
+  };
+
+  /* Конец кода графика */
 
   // грузим качество воздуха, когда модалка открылась и известны координаты
   useEffect(() => {
@@ -133,7 +225,6 @@ export default function RegionInfoModal({
     } finally {
       setSendLoading(false);
     }
-    console.log('Submit comment:', newComment);
   };
 
   if (!open) return null;
@@ -209,6 +300,48 @@ export default function RegionInfoModal({
                     </li>
                   ))}
                 </ul>
+              )}
+            </div>
+
+            {/* ГРАФИК */}
+            <div className="rim-section">
+              <button
+                type="button"
+                onClick={() => setHistoryOpen((v) => !v)}
+                className="rim-air-history-btn"
+              >
+                График качества воздуха
+              </button>
+              {historyOpen && (
+                <div className="rim-air-history">
+                  <div className="rim-calendar">
+                    <Calendar
+                      onChange={onCalendarChange}
+                      value={range}
+                      selectRange
+                      locale="ru-RU"
+                      calendarType="iso8601"
+                    />
+                  </div>
+                  {histLoading && <div>Загрузка данных…</div>}
+                  {histError && <div className="rim-error">{histError}</div>}
+                  {!histLoading && !histError && histPoints.length > 0 && (
+                    <div className="rim-chart">
+                      <ResponsiveContainer width="100%" height={260}>
+                        <LineChart
+                          data={histPoints}
+                          margin={{ top: 10, right: 20, bottom: 0, left: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="date" />
+                          <YAxis />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="aqi" stroke="#3b82f6" dot />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
