@@ -1,5 +1,6 @@
 // components/UI/modals/RegionInfoModal.jsx
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { http } from '../../api/http';
 
 export default function RegionInfoModal({
   open,
@@ -10,11 +11,43 @@ export default function RegionInfoModal({
   onAddFavorite,
   addInProgress = false,
 }) {
+  const [air, setAir] = useState({ aqi: null, loading: false, error: null });
+  const airAbortRef = useRef(null);
+
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     if (open) document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // грузим качество воздуха, когда модалка открылась и известны координаты
+  useEffect(() => {
+    if (!open || !region?.center?.lat || !region?.center?.lon) return;
+
+    // отменяем предыдущий запрос
+    if (airAbortRef.current) airAbortRef.current.abort();
+    const controller = new AbortController();
+    airAbortRef.current = controller;
+
+    setAir({ aqi: null, loading: true, error: null });
+    http
+      .get('/air-quality/current', {
+        params: { lat: region.center.lat, lon: region.center.lon },
+        signal: controller.signal,
+      })
+      .then(({ data }) => {
+        const aqi = data?.airQualityData?.europeanAqi ?? null;
+        setAir({ aqi, loading: false, error: null });
+      })
+      .catch((e) => {
+        // игнорируем отменённые запросы
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError')
+          return;
+        setAir({ aqi: null, loading: false, error: 'Не удалось загрузить данные о воздухе' });
+      });
+
+    return () => controller.abort();
+  }, [open, region?.center?.lat, region?.center?.lon]);
 
   if (!open) return null;
 
@@ -34,6 +67,13 @@ export default function RegionInfoModal({
           <div className="rim-body rim-error">{error}</div>
         ) : (
           <div className="rim-body">
+            <button
+              onClick={() => onAddFavorite?.()}
+              disabled={addInProgress}
+              title="Добавить регион в избранное"
+            >
+              {addInProgress ? 'Добавляю…' : 'Добавить регион в избранное'}
+            </button>
             <div className="rim-section">
               <b>Координаты центра:</b> {region?.center?.lat}, {region?.center?.lon}
             </div>
@@ -49,6 +89,17 @@ export default function RegionInfoModal({
               <div>
                 Грязные поверхностные воды: {region?.waterData?.dirtySurfaceWaterPercent ?? '—'}
               </div>
+            </div>
+
+            <div className="rim-section">
+              <h4>Воздух</h4>
+              {air.loading ? (
+                <div>Загрузка…</div>
+              ) : air.error ? (
+                <div className="rim-error">{air.error}</div>
+              ) : (
+                <div>Европейский AQI: {air.aqi ?? '—'}</div>
+              )}
             </div>
 
             <div className="rim-section">
@@ -73,14 +124,6 @@ export default function RegionInfoModal({
                 </ul>
               )}
             </div>
-
-            <button
-              onClick={() => onAddFavorite?.()}
-              disabled={addInProgress}
-              title="Добавить регион в избранное"
-            >
-              {addInProgress ? 'Добавляю…' : 'Добавить регион в избранное'}
-            </button>
           </div>
         )}
       </div>
