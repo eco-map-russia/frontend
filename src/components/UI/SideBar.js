@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchProfile } from '../../store/user-profile-slice';
+
+import { fetchProfile, clearProfile } from '../../store/user-profile-slice';
+import { logout } from '../../store/user-auth-slice';
 
 import tBankLogo from '../../assets/images/T-bank-sidebar-logo.svg';
 import analyticsIcon from '../../assets/images/sidebarIcons/Analytics_1.svg';
@@ -13,6 +15,7 @@ import logOutIcon from '../../assets/images/sidebarIcons/Log-out_6.svg';
 function Sidebar(props) {
   const [expanded, setExpanded] = useState(false);
   const dispatch = useDispatch();
+
   const { user, status } = useSelector((s) => s.profile);
 
   useEffect(() => {
@@ -22,6 +25,15 @@ function Sidebar(props) {
   }, [status, dispatch]);
 
   const fullName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : '';
+
+  const handleLogout = () => {
+    // 1) чистим токен и auth-состояние
+    dispatch(logout());
+    // 2) на всякий случай чистим кеш профиля (чтобы не мигал ФИО после выхода)
+    dispatch(clearProfile());
+    // 3) редиректим на страницу авторизации
+    window.location.replace('/login');
+  };
 
   return (
     <div className={`sidebar-container ${expanded ? 'is-expanded' : ''}`}>
@@ -78,7 +90,7 @@ function Sidebar(props) {
             <img className="sidebar__icon" src={helpCircleIcon} alt="T Банк" />
             <span className="sidebar__label">Помощь</span>
           </button>
-          <button className="sidebar__btn sidebar__btn--exit">
+          <button className="sidebar__btn sidebar__btn--exit" onClick={handleLogout}>
             <img className="sidebar__icon" src={logOutIcon} alt="T Банк" />
             <span className="sidebar__label">Выйти</span>
           </button>
