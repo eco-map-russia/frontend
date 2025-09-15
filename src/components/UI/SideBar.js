@@ -5,7 +5,7 @@ import { fetchProfile, clearProfile } from '../../store/user-profile-slice';
 import { logout } from '../../store/user-auth-slice';
 
 import tBankLogo from '../../assets/images/T-bank-sidebar-logo.svg';
-import analyticsIcon from '../../assets/images/sidebarIcons/Analytics_1.svg';
+import profileIcon from '../../assets/images/sidebarIcons/Profile-icon.svg';
 import inboxIcon from '../../assets/images/sidebarIcons/Inbox_2.svg';
 import calendarIcon from '../../assets/images/sidebarIcons/Calendar_3.svg';
 import reportsIcon from '../../assets/images/sidebarIcons/Reports_4.svg';
@@ -64,7 +64,7 @@ function Sidebar(props) {
         {/* Основные кнопки-иконки */}
         <nav className="sidebar__menu">
           <a className="sidebar__btn" href="/profile">
-            <img className="sidebar__icon" src={analyticsIcon} alt="T Банк" />
+            <img className="sidebar__icon" src={profileIcon} alt="T Банк" />
             <span className="sidebar__label">Личный кабинет</span>
           </a>
           <button className="sidebar__btn" onClick={props.onFavoriteRegions}>
