@@ -13,14 +13,28 @@ export default function AdminPanelModal({ open, onClose }) {
   const [error, setError] = useState(null);
 
   const resourceCfg = RESOURCES[resourceKey];
-  const methodCfg = resourceCfg.methods[method];
+  const allowedMethods = useMemo(
+    () => METHODS.filter((m) => !!resourceCfg?.methods?.[m]),
+    [resourceCfg],
+  );
+
+  // если текущий метод недоступен для выбранной сущности — берём первый доступный (чаще всего это GET)
+  const methodIsAllowed = !!resourceCfg?.methods?.[method];
+  const effectiveMethod = methodIsAllowed ? method : (allowedMethods[0] ?? 'GET');
+
+  const methodCfg = resourceCfg.methods[effectiveMethod];
 
   // Сбрасываем форму при смене сущности/метода
   useEffect(() => {
+    if (!methodIsAllowed && effectiveMethod !== method) {
+      setMethod(effectiveMethod);
+    }
+    // сброс полей/результатов как и раньше
     setValues({});
     setResult(null);
     setError(null);
-  }, [resourceKey, method, open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resourceKey, effectiveMethod]);
 
   const resourceOptions = useMemo(
     () => Object.entries(RESOURCES).map(([key, v]) => ({ value: key, label: v.label })),
@@ -81,8 +95,8 @@ export default function AdminPanelModal({ open, onClose }) {
 
           <label>
             Метод
-            <select value={method} onChange={(e) => setMethod(e.target.value)}>
-              {METHODS.filter((m) => resourceCfg.methods[m]).map((m) => (
+            <select value={effectiveMethod} onChange={(e) => setMethod(e.target.value)}>
+              {allowedMethods.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
@@ -107,6 +121,11 @@ export default function AdminPanelModal({ open, onClose }) {
 }
 
 function FormFields({ method, methodCfg, values, onChange }) {
+  if (!methodCfg) {
+    return (
+      <p className="admin-hint">Метод недоступен для выбранной сущности. Выберите другой метод.</p>
+    );
+  }
   const rows = [];
 
   // ID в URL (PUT/DELETE)
@@ -146,7 +165,7 @@ function FormFields({ method, methodCfg, values, onChange }) {
   }
 
   // Поля тела (POST/PUT)
-  if (method === 'POST' || method === 'PUT') {
+  if ((method === 'POST' || method === 'PUT') && methodCfg.bodyFields?.length) {
     methodCfg.bodyFields.forEach((f) => {
       // при PUT не рендерим дублирующийся id из body
       if (method === 'PUT' && methodCfg.needsId && f.name === 'id') return;

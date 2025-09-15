@@ -28,6 +28,11 @@ const userAuthSlice = createSlice({
   name: 'userAuth',
   initialState,
   reducers: {
+    reset(state) {
+      state.status = 'idle';
+      state.error = null;
+      state.credentials = null;
+    },
     logout(state) {
       state.isLoggedIn = false;
       state.token = null;
@@ -66,5 +71,5 @@ const userAuthSlice = createSlice({
   },
 });
 
-export const { logout, hydrateFromStorage } = userAuthSlice.actions;
+export const { reset, logout, hydrateFromStorage } = userAuthSlice.actions;
 export default userAuthSlice.reducer;

@@ -1,5 +1,8 @@
-import { useDispatch } from 'react-redux';
-import { register } from '../store/user-register-slice';
+import { useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+
+import { useSelector, useDispatch } from 'react-redux';
+import { register, reset } from '../store/user-register-slice';
 
 import PageWrapper from '../layout/PageWrapper';
 import Footer from '../components/Footer';
@@ -8,25 +11,51 @@ import tBankLogo from '../assets/images/T-bank-logo.svg';
 
 function RegisterPage() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { status, error } = useSelector((s) => s.register); // <- имя слайса в store
+  const redirectTimerRef = useRef(null);
+
+  // Чистим старое состояние при маунте и анмаунте
+  useEffect(() => {
+    dispatch(reset());
+    return () => dispatch(reset());
+  }, [dispatch]);
+
+  // На успешную регистрацию — показываем сообщение и через 2с уходим на /login
+  useEffect(() => {
+    if (status === 'succeeded') {
+      redirectTimerRef.current = setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    }
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    };
+  }, [status, navigate]);
+
   const formSubmitHandler = (event) => {
     event.preventDefault();
 
-    const registerformData = new FormData(event.currentTarget);
+    // на новую попытку уберём старые ошибки/сообщения
+    dispatch(reset());
+
+    const fd = new FormData(event.currentTarget);
     const data = {
-      email: registerformData.get('email'),
-      password: registerformData.get('password'),
-      firstName: registerformData.get('firstName'),
-      lastName: registerformData.get('lastName'),
-      phone: registerformData.get('phone'),
+      firstName: fd.get('firstName'),
+      lastName: fd.get('lastName'),
+      phone: fd.get('phone'),
+      email: fd.get('email'),
+      password: fd.get('password'),
     };
 
-    console.log('Регистрационные данные (в компоненте):', data);
-
-    dispatch(register(data)); // ← уходит в слайс
-
-    // очистить форму
-    event.currentTarget.reset();
+    dispatch(register(data));
+    // ВАЖНО: форму не чистим сразу, чтобы пользователь видел, что отправил
+    // При успешной регистрации нас всё равно перебросит на /login
   };
+
+  const isLoading = status === 'loading';
+  const isSuccess = status === 'succeeded';
+  const isError = status === 'failed';
 
   return (
     <PageWrapper>
@@ -76,6 +105,20 @@ function RegisterPage() {
                 required
               />
             </div>
+
+            {/* Сообщения состояния */}
+            {isError && (
+              <p className="form-message form-message--error" role="alert">
+                {`Ошибка регистрации: ${error}` || 'Ошибка регистрации'}
+              </p>
+            )}
+
+            {isSuccess && (
+              <p className="form-message form-message--success" role="status">
+                Регистрация успешна!
+              </p>
+            )}
+            {/*
             <div className="form-group checkbox-group">
               <input type="checkbox" id="accept" name="accept" />
               <label htmlFor="accept">
@@ -85,12 +128,13 @@ function RegisterPage() {
                 </a>
               </label>
             </div>
+            */}
             <div className="register-link">
               <span>У вас уже есть аккаунт? </span>
-              <a href="/login">Войти</a>
+              <Link to="/login">Войти</Link>
             </div>
-            <button type="submit" className="login-btn">
-              Зарегистрироваться
+            <button type="submit" className="login-btn" disabled={isLoading}>
+              {isLoading ? 'Отправляем…' : 'Зарегистрироваться'}
             </button>
           </form>
         </div>

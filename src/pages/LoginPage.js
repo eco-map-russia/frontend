@@ -1,5 +1,8 @@
-import { useDispatch } from 'react-redux';
-import { login } from '../store/user-auth-slice';
+import { useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+
+import { login, reset as resetAuth } from '../store/user-auth-slice';
 
 import PageWrapper from '../layout/PageWrapper';
 import Footer from '../components/Footer';
@@ -9,9 +12,38 @@ import tBankLogo from '../assets/images/T-bank-logo.svg';
 
 function LoginPage() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { status, error, isLoggedIn } = useSelector((s) => s.auth); // <- ключ в store = "auth"
+  const redirectTimerRef = useRef(null);
+
+  // Очистим старые ошибки/статус при открытии и при уходе со страницы
+  useEffect(() => {
+    dispatch(resetAuth());
+    return () => dispatch(resetAuth());
+  }, [dispatch]);
+
+  // Если уже залогинен (например, пришли на /login вручную) — сразу на карту
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/map', { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
+
+  // На успешный логин — показать сообщение и через 2с перейти на /map
+  useEffect(() => {
+    if (status === 'succeeded') {
+      redirectTimerRef.current = setTimeout(() => navigate('/map'), 2000);
+    }
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    };
+  }, [status, navigate]);
 
   const formSubmitHandler = (event) => {
     event.preventDefault();
+
+    // На новую попытку — уберём старые ошибки/сообщения
+    dispatch(resetAuth());
 
     const formData = new FormData(event.currentTarget);
     const data = {
@@ -20,10 +52,12 @@ function LoginPage() {
     };
 
     dispatch(login(data)); // ← уходит POST /api/v1/auth/login
-
-    // очистить форму
-    event.currentTarget.reset();
   };
+
+  const isLoading = status === 'loading';
+  const isSuccess = status === 'succeeded';
+  const isError = status === 'failed';
+
   return (
     <PageWrapper>
       <main className="login-main">
@@ -52,12 +86,25 @@ function LoginPage() {
                 required
               />
             </div>
-            <button type="submit" className="login-btn">
-              Войти
+
+            {/* Сообщения состояния */}
+            {isError && (
+              <p className="form-message form-message--error" role="alert">
+                {error || 'Ошибка авторизации'}
+              </p>
+            )}
+
+            {isSuccess && (
+              <p className="form-message form-message--success" role="status">
+                Успешный вход! Сейчас перенаправим на карту…
+              </p>
+            )}
+            <button type="submit" className="login-btn" disabled={isLoading}>
+              {isLoading ? 'Отправляем…' : 'Войти'}
             </button>
             <div className="register-link">
               <span>У вас ещё нет аккаунта? </span>
-              <a href="/register">Создать аккаунт</a>
+              <Link to="/register">Создать аккаунт</Link>
             </div>
           </form>
         </div>

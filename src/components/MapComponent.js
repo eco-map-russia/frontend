@@ -21,7 +21,6 @@ import AdminPanel from './UI/admin/AdminPanel';
 import SideBar from './UI/SideBar';
 import NavigateButtons from './UI/NavigateButtons';
 import FavoritesModal from './UI/FavoritesModal';
-import MapCalendar from './UI/MapCalendar';
 
 const FILTER_TYPE_BY_ID = {
   0: 'air',
@@ -653,11 +652,6 @@ function MapComponent() {
     }
   };
 
-  const dateChangeHandler = (date) => {
-    console.log('Выбрана дата:', date);
-    // здесь можно подгрузить данные карты за выбранный день
-  };
-
   const zoomInHandler = () => {
     const map = mapRef.current;
     if (!map) return;
@@ -965,7 +959,7 @@ function MapComponent() {
         onZoomIn={zoomInHandler}
         onZoomOut={zoomOutHandler}
       />
-      <MapCalendar onDateChange={dateChangeHandler} />
+
       <RegionInfoModal
         open={regionModalOpen}
         onClose={() => setRegionModalOpen(false)}
