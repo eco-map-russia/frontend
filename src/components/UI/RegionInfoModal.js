@@ -246,6 +246,7 @@ export default function RegionInfoModal({
         ) : (
           <div className="rim-body">
             <button
+              className="rim-add-favorite-btn"
               onClick={() => onAddFavorite?.()}
               disabled={addInProgress}
               title="Добавить регион в избранное"
@@ -294,7 +295,7 @@ export default function RegionInfoModal({
                       {r.description ? <div className="rim-muted">{r.description}</div> : null}
                       {r.website ? (
                         <a href={r.website} target="_blank" rel="noreferrer">
-                          Сайт
+                          Ссылка на сайт заповедника
                         </a>
                       ) : null}
                     </li>
@@ -390,6 +391,7 @@ export default function RegionInfoModal({
                 />
                 <button
                   type="button"
+                  className="rim-add-favorite-btn"
                   onClick={submitComment}
                   disabled={sendLoading || !newComment.trim()}
                 >

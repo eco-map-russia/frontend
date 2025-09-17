@@ -5,7 +5,7 @@ html {
   width: 100%;
   box-sizing: border-box;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 *,
@@ -189,6 +189,7 @@ box-sizing: border-box;
 }
 
 .rim-modal {
+  font-size: 1.2rem;
   width: min(720px, 92vw);
   background: #fff; border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;
@@ -198,14 +199,18 @@ box-sizing: border-box;
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,.06);
 }
+.rim-header h3 { font-size: 1.5rem; font-weight: 700; }
 
 .rim-close { border: 0; background: transparent; cursor: pointer; font-size: 22px; }
-.rim-body { padding: 16px 20px; max-height: 60vh; overflow: auto; }
+.rim-body { padding: 16px 20px; max-height: 70vh; overflow: auto; }
 .rim-section { margin-bottom: 14px; }
+.rim-section div { margin-bottom: 7px; }
 .rim-section h4 { margin: 0 0 6px; font-size: 14px; opacity: .7; }
 .rim-list { margin: 0; padding-left: 18px; }
 .rim-muted { opacity: .75; font-size: 13px; }
 .rim-error { color: #c00; }
+
+.rim-list a { color: #3c6be2; text-decoration: none; }
 
 /* График */
 /* встроенный календарь и график в модалке */
@@ -573,7 +578,7 @@ box-sizing: border-box;
   position: fixed;
   right: 23px;
   top: 1em;
-  height: 40em;
+  height: 36em;
   z-index: 10;
 }
 
@@ -640,15 +645,21 @@ box-sizing: border-box;
   transition: opacity .2s, max-width .25s; }
 .sidebar--expanded .sidebar__user { opacity: 1; max-width: 100%; }
 .sidebar__user-name {
-  color: #3C6BE2;                 /* синий из макета */
+  color: #000;                 /* синий из макета */
   font-size: 16px;
   
   white-space: nowrap;
 }
-.sidebar__user-name a {
+
+.sidebar__user-name p {
   text-decoration: none;
   color: inherit;                /* наследуем цвет */
 }
+.sidebar__user-name .to-login {
+  color: #3C6BE2;
+  cursor: pointer;
+}
+
 
 /* Раздельная линия */
 
@@ -723,6 +734,8 @@ box-sizing: border-box;
   border-radius: 8px;
   cursor: pointer;
   text-decoration: none;
+  font: inherit;         /* унаследовать шрифт у родителя */
+  color: inherit;        /* унаследовать цвет */
 }
 
 .sidebar__btn:hover {
@@ -781,8 +794,8 @@ box-sizing: border-box;
 }
 
 .navigate-button {
-  width: 82px; 
-  height: 80px;
+  width: 72px; 
+  height: 70px;
   background-color: #F1F1EF;
   border: none;
   border-radius: 20px;
@@ -1122,18 +1135,23 @@ box-sizing: border-box;
 .form-message--success { color: #2e7d32; }
 .login-btn[disabled] { opacity: .7; cursor: not-allowed; }
 
-.login-btn {
+.login-btn, .rim-add-favorite-btn {
+  margin-bottom: 14px;
   padding: 13px 0;
   width: 100%;
   border-radius: 9px;
   background: #FFDD2D;
   color: #262c32;
-  font-size: 1.06rem;
+  font-size: 1.2rem;
   font-weight: 600;
   border: none;
   cursor: pointer;
   margin-top: 6px;
   transition: background 0.14s;
+}
+
+.rim-add-favorite-btn {
+  width: 40%;
 }
 
 .login-btn:hover,

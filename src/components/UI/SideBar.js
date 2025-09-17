@@ -46,7 +46,15 @@ function Sidebar(props) {
           {/* Имя пользователя (видно только в развернутом) */}
           <div className="sidebar__user">
             <div className="sidebar__user-name">
-              <a href="/login">{status === 'loading' ? '' : fullName || 'Войти'}</a>
+              {status === 'loading' ? (
+                ''
+              ) : fullName ? (
+                <p>{fullName}</p>
+              ) : (
+                <p className="to-login" onClick={handleLogout}>
+                  Войти
+                </p>
+              )}
             </div>
           </div>
 
