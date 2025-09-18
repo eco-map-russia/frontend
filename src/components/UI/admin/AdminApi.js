@@ -1,26 +1,37 @@
+// src/components/admin/AdminApi.js
 import { http } from '../../../api/http';
 
-// Собираем путь и вызываем соответствующий метод axios
+// Проверка доступности метода у ресурса
+export function hasMethod(resourceCfg, method) {
+  return !!resourceCfg?.methods?.[method];
+}
+
+// Основная универсальная функция (осталась для совместимости)
 export async function callAdminApi(resourceCfg, method, values) {
-  const methodCfg = resourceCfg.methods[method];
+  const methodCfg = resourceCfg?.methods?.[method];
   if (!methodCfg) throw new Error(`Метод ${method} не поддержан`);
 
   let url = resourceCfg.base;
   let body = null;
   let params = null;
 
+  // id в URL (PUT/DELETE)
   if (methodCfg.needsId) {
     const id = values?.id;
     if (!id) throw new Error('Не указан ID');
     url = `${url}/${id}`;
   }
 
-  if (method === 'GET' && methodCfg.queryFields?.length) {
-    params = collectFromFields(methodCfg.queryFields, values);
+  // query для GET
+  if (method === 'GET') {
+    const page = Number(values?.page ?? 0);
+    const size = Number(values?.size ?? 10);
+    params = { page, size };
   }
 
+  // тело для POST/PUT
   if (method === 'POST' || method === 'PUT') {
-    body = collectFromFields(methodCfg.bodyFields, values);
+    body = buildBodyFromFields(methodCfg.bodyFields, values);
     if (method === 'PUT' && methodCfg.includeIdInBody && values?.id) {
       body.id = values.id;
     }
@@ -40,11 +51,16 @@ export async function callAdminApi(resourceCfg, method, values) {
   }
 }
 
-function collectFromFields(fields = [], values = {}) {
+/** Собирает тело запроса из описания полей схемы */
+export function buildBodyFromFields(fields = [], values = {}, { includeUndefined = false } = {}) {
   const out = {};
   fields.forEach((f) => {
-    const v = values?.[f.name];
-    if (v !== undefined && v !== '') out[f.name] = cast(f, v);
+    const raw = values?.[f.name];
+    if (raw === undefined || raw === '') {
+      if (includeUndefined) out[f.name] = undefined;
+      return;
+    }
+    out[f.name] = cast(f, raw);
   });
   return out;
 }
@@ -52,8 +68,7 @@ function collectFromFields(fields = [], values = {}) {
 function cast(field, value) {
   if (field.type === 'number') {
     const n = Number(value);
-    if (Number.isNaN(n)) return undefined;
-    return n;
+    return Number.isNaN(n) ? undefined : n;
   }
   return value;
 }

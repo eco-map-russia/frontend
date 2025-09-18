@@ -1,4 +1,4 @@
-// src/admin/resourcesConfig.js
+// src/components/admin/ResourcesConfig.js
 
 // ===== утилиты для описания полей =====
 const uuid = (name, label, required = true) => ({
@@ -8,7 +8,13 @@ const uuid = (name, label, required = true) => ({
   required,
   placeholder: 'UUID',
 });
-const text = (name, label, required = true) => ({ name, label, type: 'text', required });
+const text = (name, label, required = true, placeholder = '') => ({
+  name,
+  label,
+  type: 'text',
+  required,
+  placeholder,
+});
 const textarea = (name, label, required = false) => ({ name, label, type: 'textarea', required });
 const number = (name, label, min = null, max = null, step = 'any', required = true) => ({
   name,
@@ -30,16 +36,21 @@ const int = (name, label, min = null, max = null, required = true) => ({
 });
 const date = (name, label, required = true) => ({ name, label, type: 'date', required });
 
-// ===== конфиг по сущностям =====
+// ===== конфиг по сущностям (V2) =====
 const RESOURCES = {
   'nature-reserve': {
     label: 'Заповедники',
     base: '/admin/nature-reserve',
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Название' },
+      { key: 'regionName', label: 'Регион' },
+      { key: 'area', label: 'Площадь' },
+      { key: 'yearFounded', label: 'Год' },
+      { key: 'website', label: 'Сайт' },
+    ],
     methods: {
-      GET: {
-        needsId: false,
-        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
-      },
+      GET: { needsId: false },
       POST: {
         needsId: false,
         includeIdInBody: false,
@@ -72,11 +83,14 @@ const RESOURCES = {
   soil: {
     label: 'Почва',
     base: '/admin/soil',
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'regionName', label: 'Регион' },
+      { key: 'chronicSoilPollutionPercent', label: 'Хроническое загрязнение (%)' },
+      { key: 'landDegradationNeutralityIndex', label: 'Индекс нейтральности деградации' },
+    ],
     methods: {
-      GET: {
-        needsId: false,
-        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
-      },
+      GET: { needsId: false },
       POST: {
         needsId: false,
         includeIdInBody: false,
@@ -115,11 +129,16 @@ const RESOURCES = {
   'cleanup-events': {
     label: 'Субботники',
     base: '/admin/cleanup-events',
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'location', label: 'Локация' },
+      { key: 'cityName', label: 'Город' },
+      { key: 'date', label: 'Дата' },
+      { key: 'organizer', label: 'Организатор' },
+      { key: 'participantsExpected', label: 'Участников (ожид.)' },
+    ],
     methods: {
-      GET: {
-        needsId: false,
-        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
-      },
+      GET: { needsId: false },
       POST: {
         needsId: false,
         includeIdInBody: false,
@@ -152,11 +171,13 @@ const RESOURCES = {
   radiation: {
     label: 'Радиация',
     base: '/admin/radiation',
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'pointName', label: 'Точка' },
+      { key: 'betaFallout', label: 'Бета-выпадения' },
+    ],
     methods: {
-      GET: {
-        needsId: false,
-        queryFields: [int('page', 'Страница', 0), int('size', 'На странице', 1)],
-      },
+      GET: { needsId: false },
       POST: {
         needsId: false,
         includeIdInBody: false,
@@ -181,41 +202,28 @@ const RESOURCES = {
   water: {
     label: 'Вода',
     base: '/admin/water',
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'regionName', label: 'Регион' },
+      { key: 'dirtySurfaceWaterPercent', label: 'Загрязнённые поверхностные воды (%)' },
+    ],
     methods: {
-      GET: {
-        needsId: false,
-        queryFields: [
-          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
-          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
-        ],
-      },
+      GET: { needsId: false },
       POST: {
         needsId: false,
         includeIdInBody: false,
         bodyFields: [
-          { name: 'regionId', label: 'Region ID', type: 'text', required: true },
-          {
-            name: 'dirtySurfaceWaterPercent',
-            label: 'Загрязнённые поверхностные воды (%)',
-            type: 'number',
-            step: 0.1,
-            required: true,
-          },
+          uuid('regionId', 'Region ID'),
+          number('dirtySurfaceWaterPercent', 'Загрязнённые поверхностные воды (%)', 0, 100, 0.1),
         ],
       },
       PUT: {
         needsId: true,
         includeIdInBody: true,
         bodyFields: [
-          { name: 'id', label: 'ID', type: 'text', required: true },
-          { name: 'regionId', label: 'Region ID', type: 'text', required: true },
-          {
-            name: 'dirtySurfaceWaterPercent',
-            label: 'Загрязнённые поверхностные воды (%)',
-            type: 'number',
-            step: 0.1,
-            required: true,
-          },
+          uuid('id', 'ID'),
+          uuid('regionId', 'Region ID'),
+          number('dirtySurfaceWaterPercent', 'Загрязнённые поверхностные воды (%)', 0, 100, 0.1),
         ],
       },
       DELETE: { needsId: true, bodyFields: [] },
@@ -225,100 +233,62 @@ const RESOURCES = {
   points: {
     label: 'Точки наблюдения',
     base: '/admin/points',
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Название' },
+      { key: 'cityName', label: 'Город' },
+      { key: 'latitude', label: 'Широта' },
+      { key: 'longitude', label: 'Долгота' },
+    ],
     methods: {
-      GET: {
-        needsId: false,
-        queryFields: [
-          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
-          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
-        ],
-      },
+      GET: { needsId: false },
       POST: {
         needsId: false,
         includeIdInBody: false,
         bodyFields: [
-          { name: 'name', label: 'Название', type: 'text', required: true },
-          { name: 'cityId', label: 'City ID', type: 'text', required: true },
-          {
-            name: 'latitude',
-            label: 'Широта',
-            type: 'number',
-            step: 0.000001,
-            min: -90,
-            max: 90,
-            required: true,
-          },
-          {
-            name: 'longitude',
-            label: 'Долгота',
-            type: 'number',
-            step: 0.000001,
-            min: -180,
-            max: 180,
-            required: true,
-          },
+          text('name', 'Название'),
+          uuid('cityId', 'City ID'),
+          number('latitude', 'Широта', -90, 90, 0.000001),
+          number('longitude', 'Долгота', -180, 180, 0.000001),
         ],
       },
       PUT: {
         needsId: true,
         includeIdInBody: true,
         bodyFields: [
-          { name: 'id', label: 'ID', type: 'text', required: true },
-          { name: 'name', label: 'Название', type: 'text', required: true },
-          { name: 'cityId', label: 'City ID', type: 'text', required: true },
-          {
-            name: 'latitude',
-            label: 'Широта',
-            type: 'number',
-            step: 0.000001,
-            min: -90,
-            max: 90,
-            required: true,
-          },
-          {
-            name: 'longitude',
-            label: 'Долгота',
-            type: 'number',
-            step: 0.000001,
-            min: -180,
-            max: 180,
-            required: true,
-          },
+          uuid('id', 'ID'),
+          text('name', 'Название'),
+          uuid('cityId', 'City ID'),
+          number('latitude', 'Широта', -90, 90, 0.000001),
+          number('longitude', 'Долгота', -180, 180, 0.000001),
         ],
       },
       DELETE: { needsId: true, bodyFields: [] },
     },
   },
 
-  // /api/v1/admin/cities — только GET с query-параметрами page/size
+  // только GET
   cities: {
     label: 'Города',
     base: '/admin/cities',
-    methods: {
-      GET: {
-        needsId: false,
-        queryFields: [
-          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
-          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
-        ],
-      },
-      // других методов нет
-    },
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Название' },
+      { key: 'regionName', label: 'Регион' },
+      { key: 'population', label: 'Население' },
+    ],
+    methods: { GET: { needsId: false } },
   },
 
-  // /api/v1/admin/regions — только GET с query-параметрами page/size
+  // только GET
   regions: {
     label: 'Регионы',
     base: '/admin/regions',
-    methods: {
-      GET: {
-        needsId: false,
-        queryFields: [
-          { name: 'page', label: 'Страница', type: 'number', step: 1, required: true },
-          { name: 'size', label: 'На странице', type: 'number', step: 1, required: true },
-        ],
-      },
-    },
+    columns: [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Название' },
+    ],
+    methods: { GET: { needsId: false } },
   },
 };
 
