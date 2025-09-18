@@ -283,9 +283,14 @@ function Table({ rows, columns, canUpdate, canDelete, onEdit, onDelete }) {
     </table>
   );
 }
+// фикс отображения вложенных свойств (координат точек наблюдения)
+function getByPath(obj, path) {
+  if (!obj || !path) return undefined;
+  return path.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
+}
 
 function formatCell(row, key) {
-  const v = row?.[key];
+  const v = key.includes('.') ? getByPath(row, key) : row?.[key];
   if (v == null) return '—';
   if (typeof v === 'number') return String(v);
   if (typeof v === 'boolean') return v ? 'Да' : 'Нет';

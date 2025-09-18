@@ -51,11 +51,14 @@ const adaptAirPoints = makePointsAdaptor({
   toProps: (p) => ({
     hintContent: `${p.pointName} • AQI: ${p.europeanAqi}`,
     balloonContent: `
-      <div style="font-size:13px;">
-        <b>${p.pointName}</b><br/>
-        PM2.5: ${p.pm25} • PM10: ${p.pm10}<br/>
-        NO₂: ${p.nitrogenDioxide} • SO₂: ${p.sulphurDioxide}<br/>
-        O₃: ${p.ozone} • CO₂: ${p.carbonDioxide}
+      <div style="font-size:13px; line-height:1.5; padding:8px; background:#f9f9f9; border-radius:6px;">
+        <b style="font-size:14px; color:#2c3e50;">${p.pointName}</b><br/>
+        <div>PM2.5: <b>${p.pm25}</b></div>
+        <div>PM10: <b>${p.pm10}</b></div>
+        <div>NO₂: <b>${p.nitrogenDioxide}</b></div>
+        <div>SO₂: <b>${p.sulphurDioxide}</b></div>
+        <div>O₃: <b>${p.ozone}</b></div>
+        <div>CO₂: <b>${p.carbonDioxide}</b></div>
       </div>
     `,
   }),
@@ -120,14 +123,13 @@ function makeRegionChoroplethAdaptor({
 const adaptRadiationPoints = makePointsAdaptor({
   getId: (p) => p.pointId,
   getName: (p) => p.pointName ?? 'Точка',
-  // Внимание: в radiation — coordinatesResponseDto (нижний регистр)
   getLonLat: (p) => [p.coordinatesResponseDto.lat, p.coordinatesResponseDto.lon],
   toProps: (p) => ({
     hintContent: `${p.pointName} • β: ${p.betaFallout}`,
     balloonContent: `
-      <div style="font-size:13px;">
-        <b>${p.pointName}</b><br/>
-        Бета-выпадение: ${p.betaFallout}
+      <div style="font-size:13px; line-height:1.5; padding:8px; background:#fff7f7; border:1px solid #f1c0c0; border-radius:6px;">
+        <b style="font-size:14px; color:#8e1e1e;">${p.pointName}</b><br/>
+        <div>Бета-выпадение: <b>${p.betaFallout}</b></div>
       </div>
     `,
   }),
@@ -138,14 +140,15 @@ const adaptCleanupEventsPoints = makePointsAdaptor({
   getName: (p) => p.cityName ?? 'Инициатива',
   getLonLat: (p) => [p.coordinatesResponseDto.lon, p.coordinatesResponseDto.lat],
   toProps: (p) => ({
-    // всплывающая подсказка + дата
     hintContent: `${p.cityName ?? 'Инициатива'} • ${formatDate(p.date)}`,
-    // балун с городом, местом и датой
     balloonContent: `
-      <div style="font-size:13px;line-height:1.35">
-        <b>${p.cityName ?? 'Инициатива'}</b><br/>
-        ${p.location ? `Место: ${p.location}<br/>` : ''}
-        Дата: ${formatDate(p.date)}
+      <div style="font-size:13px; line-height:1.5; padding:8px; background:#f0f9f0; border:1px solid #c2e0c2; border-radius:6px;">
+        <b style="font-size:14px; color:#2d6a2d;">${p.cityName ?? 'Инициатива'}</b><br/>
+        ${p.location ? `<div>Место: <b>${p.location}</b></div>` : ''}
+        ${p.organizer ? `<div>Организатор: <b>${p.organizer}</b></div>` : ''}
+        ${p.description ? `<div>Описание: <b>${p.description}</b></div>` : ''}
+        ${p.participantsExpected ? `<div>Требуемое кол-во участников: <b>${p.participantsExpected}</b></div>` : ''}
+        <div>Дата: <b>${formatDate(p.date)}</b></div>
       </div>
     `,
   }),

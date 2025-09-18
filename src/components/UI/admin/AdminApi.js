@@ -55,7 +55,11 @@ export async function callAdminApi(resourceCfg, method, values) {
 export function buildBodyFromFields(fields = [], values = {}, { includeUndefined = false } = {}) {
   const out = {};
   fields.forEach((f) => {
-    const raw = values?.[f.name];
+    let raw = values?.[f.name];
+    // если префилл из ответа и значения по имени нет — попробуем взять по sourcePath
+    if ((raw === undefined || raw === '') && f.sourcePath) {
+      raw = getByPath(values, f.sourcePath);
+    }
     if (raw === undefined || raw === '') {
       if (includeUndefined) out[f.name] = undefined;
       return;
@@ -63,6 +67,11 @@ export function buildBodyFromFields(fields = [], values = {}, { includeUndefined
     out[f.name] = cast(f, raw);
   });
   return out;
+}
+
+function getByPath(obj, path) {
+  if (!obj || !path) return undefined;
+  return path.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
 }
 
 function cast(field, value) {
