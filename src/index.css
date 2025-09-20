@@ -1,5 +1,35 @@
 @import "reset.css";
 
+@font-face {
+    font-family: 'Tinkoff Sans';
+    src: url('./assets/fonts/TinkoffSans/TinkoffSans-Bold.woff2') format('woff2'),
+         url('./assets/fonts/TinkoffSans/TinkoffSans-Bold.woff') format('woff'),
+         url('./assets/fonts/TinkoffSans/TinkoffSans-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tinkoff Sans';
+    src: url('./assets/fonts/TinkoffSans/TinkoffSans-Medium.woff2') format('woff2'),
+         url('./assets/fonts/TinkoffSans/TinkoffSans-Medium.woff') format('woff'),
+         url('./assets/fonts/TinkoffSans/TinkoffSans-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tinkoff Sans';
+    src: url('./assets/fonts/TinkoffSans/TinkoffSans-Regular.woff2') format('woff2'),
+         url('./assets/fonts/TinkoffSans/TinkoffSans-Regular.woff') format('woff'),
+         url('./assets/fonts/TinkoffSans/TinkoffSans-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 html {
   overflow-x: hidden;
   width: 100%;
@@ -1104,6 +1134,9 @@ box-sizing: border-box;
 
   background-color: #FFDD2D;
   border-radius: 15px;
+
+  font-family: 'Tinkoff Sans', sans-serif; /* 👈 вот здесь */
+
 }
 
 .bank-logo img {
@@ -1112,10 +1145,10 @@ box-sizing: border-box;
 }
 
 .bank-name {
-  font-size: 1.42rem;
+  font-size: 3.5rem;
   font-weight: 700;
   color: #262c32;
-  letter-spacing: 0.1em;
+  
 }
 
 .login-form {

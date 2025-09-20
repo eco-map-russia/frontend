@@ -259,14 +259,19 @@ export default function RegionInfoModal({
 
             <div className="rim-section">
               <h4>Почва</h4>
-              <div>Хрон. загрязнение: {region?.soilData?.chronicSoilPollutionPercent ?? '—'}</div>
-              <div>Индекс LDN: {region?.soilData?.landDegradationNeutralityIndex ?? '—'}</div>
+              <div>
+                Хрон. загрязнение: {region?.soilData?.chronicSoilPollutionPercent || 'Нет данных'}
+              </div>
+              <div>
+                Индекс LDN: {region?.soilData?.landDegradationNeutralityIndex || 'Нет данных'}
+              </div>
             </div>
 
             <div className="rim-section">
               <h4>Вода</h4>
               <div>
-                Грязные поверхностные воды: {region?.waterData?.dirtySurfaceWaterPercent ?? '—'}
+                Грязные поверхностные воды:{' '}
+                {region?.waterData?.dirtySurfaceWaterPercent || 'Нет данных'}
               </div>
             </div>
 
