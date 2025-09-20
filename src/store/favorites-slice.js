@@ -68,6 +68,8 @@ const initialState = {
   deletingIds: {}, // { [id]: true }
   addingIds: {}, // { [id]: true } — какие регионы сейчас добавляются
   lastAddedId: null, // id последнего успешно добавленного (опционально для UI)
+
+  ids: {}, // { [id]: true }
 };
 
 const favoritesSlice = createSlice({
@@ -108,7 +110,7 @@ const favoritesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // fetch
+      // --- fetch ---
       .addCase(fetchFavoriteRegions.pending, (state) => {
         state.status = 'loading';
         state.error = null;
@@ -125,13 +127,25 @@ const favoritesSlice = createSlice({
         state.first = d.first ?? state.page === 0;
         state.last = d.last ?? state.page + 1 >= state.totalPages;
         state.empty = d.empty ?? state.items.length === 0;
+
+        // пересобираем/обновляем индекс избранного
+        const nextIds = {};
+        for (const it of state.items) {
+          if (it?.id != null) nextIds[String(it.id)] = true;
+        }
+        // Вариант 1 (перезаписать индекс целиком):
+        // state.ids = nextIds;
+
+        // Вариант 2 (рекомендую): мерджим, чтобы не терять id,
+        // которые пришли из addFavoriteRegion.fulfilled или с других страниц
+        state.ids = { ...state.ids, ...nextIds };
       })
       .addCase(fetchFavoriteRegions.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       })
 
-      // delete
+      // --- delete ---
       .addCase(deleteFavoriteRegion.pending, (state, action) => {
         const id = action.meta.arg?.id;
         if (id) state.deletingIds[id] = true;
@@ -139,18 +153,26 @@ const favoritesSlice = createSlice({
       })
       .addCase(deleteFavoriteRegion.fulfilled, (state, action) => {
         const { id } = action.payload || {};
-        if (id) {
-          delete state.deletingIds[id];
-          // Удаляем локально (если произошёл рефетч — список всё равно перезапишется)
-          const before = state.items.length;
-          state.items = state.items.filter((x) => x.id !== id);
-          const diff = before - state.items.length;
-          if (diff > 0) {
-            state.totalElements = Math.max(0, state.totalElements - diff);
-            state.numberOfElements = Math.max(0, state.numberOfElements - diff);
-            state.empty = state.items.length === 0;
-          }
+        if (!id) return;
+
+        // снимаем флаг "удаляется"
+        delete state.deletingIds[id];
+
+        // убираем из списка (если не было рефетча)
+        const before = state.items.length;
+        state.items = state.items.filter((x) => x.id !== id);
+        const diff = before - state.items.length;
+        if (diff > 0) {
+          state.totalElements = Math.max(0, state.totalElements - diff);
+          state.numberOfElements = Math.max(0, state.numberOfElements - diff);
+          state.empty = state.items.length === 0;
         }
+
+        // чистим индекс
+        delete state.ids[String(id)];
+
+        // опционально
+        if (state.lastAddedId === id) state.lastAddedId = null;
       })
       .addCase(deleteFavoriteRegion.rejected, (state, action) => {
         const id = action.meta.arg?.id;
@@ -158,19 +180,17 @@ const favoritesSlice = createSlice({
         state.error = action.payload || 'Не удалось удалить регион';
       })
 
-      // add
+      // --- add ---
       .addCase(addFavoriteRegion.pending, (state, action) => {
         const id = action.meta.arg?.id;
         if (id) state.addingIds[id] = true;
       })
       .addCase(addFavoriteRegion.fulfilled, (state, action) => {
         const id = action.payload?.id;
-        if (id) {
-          delete state.addingIds[id];
-          state.lastAddedId = id;
-          // Опционально: если вы хотите сразу отразить это в открытой модалке списка,
-          // можно добавить state.items.unshift({...}), но часто хватает просто POST'а.
-        }
+        if (!id) return;
+        delete state.addingIds[id];
+        state.lastAddedId = id;
+        state.ids[String(id)] = true; // фиксируем в индексе — важно для UI
       })
       .addCase(addFavoriteRegion.rejected, (state, action) => {
         const id = action.meta.arg?.id;
@@ -188,5 +208,12 @@ export const {
   resetFavoritesState,
 } = favoritesSlice.actions;
 
+export const selectIsFavoriteById = (state, id) => {
+  const rid = id == null ? null : String(id);
+  if (!rid) return false;
+  const fav = !!state.favorites?.ids?.[rid];
+  const adding = !!state.favorites?.addingIds?.[rid];
+  return fav || adding;
+};
 export const selectFavorites = (state) => state.favorites ?? initialState;
 export default favoritesSlice.reducer;

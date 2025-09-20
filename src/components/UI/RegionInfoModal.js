@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { http } from '../../api/http';
+import { selectIsFavoriteById, fetchFavoriteRegions } from '../../store/favorites-slice';
 
 import Calendar from 'react-calendar';
 import {
@@ -22,9 +23,21 @@ export default function RegionInfoModal({
   onAddFavorite,
   addInProgress = false,
 }) {
+  const dispatch = useDispatch();
+
   // текущий пользователь (для отображения своего коммента сразу после POST — на бэке тоже вернётся)
   const currentUser = useSelector((s) => s.profile?.user);
   const regionId = region?.id ?? region?.regionId ?? region?.code ?? null; // нормализуем идентификатор региона
+  const isFavorite = useSelector((s) => selectIsFavoriteById(s, regionId));
+
+  const favIndexCount = useSelector((s) => Object.keys(s.favorites?.ids ?? {}).length);
+  useEffect(() => {
+    if (!open || !regionId) return;
+    // если индекс пуст — подгрузим список (размер подберите под ваш бэк)
+    if (favIndexCount === 0) {
+      dispatch(fetchFavoriteRegions({ page: 0, size: 1000 }));
+    }
+  }, [open, regionId, favIndexCount, dispatch]);
 
   const [air, setAir] = useState({ aqi: null, loading: false, error: null });
   const airAbortRef = useRef(null);
@@ -245,17 +258,21 @@ export default function RegionInfoModal({
           <div className="rim-body rim-error">{error}</div>
         ) : (
           <div className="rim-body">
-            <button
-              className="rim-add-favorite-btn"
-              onClick={() => onAddFavorite?.()}
-              disabled={addInProgress}
-              title="Добавить регион в избранное"
-            >
-              {addInProgress ? 'Добавляю…' : 'Добавить регион в избранное'}
-            </button>
-            <div className="rim-section">
-              <b>Координаты центра:</b> {region?.center?.lon}, {region?.center?.lat}
-            </div>
+            {!isFavorite && (
+              <button
+                className="rim-add-favorite-btn"
+                onClick={() => onAddFavorite?.()}
+                disabled={addInProgress}
+                title="Добавить регион в избранное"
+              >
+                {addInProgress ? 'Добавляю…' : 'Добавить регион в избранное'}
+              </button>
+            )}
+            {isFavorite && (
+              <div className="rim-badge" aria-label="Регион уже в избранном">
+                ✓ В избранном
+              </div>
+            )}
 
             <div className="rim-section">
               <h4>Почва</h4>

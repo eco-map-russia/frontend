@@ -158,7 +158,7 @@ export default function AdminPanelModal({ open, onClose }) {
         {/* верхняя панель */}
         <div className="admin-grid">
           <label>
-            Сущность
+            Категории
             <select value={resourceKey} onChange={(e) => setResourceKey(e.target.value)}>
               {resourceOptions.map((o) => (
                 <option key={o.value} value={o.value}>
