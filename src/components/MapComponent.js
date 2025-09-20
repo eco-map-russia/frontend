@@ -22,6 +22,56 @@ import SideBar from './UI/SideBar';
 import NavigateButtons from './UI/NavigateButtons';
 import FavoritesModal from './UI/FavoritesModal';
 
+function ensureEcoBalloonStyles() {
+  if (document.getElementById('eco-balloon-styles')) return;
+  const css = `
+  .eco-balloon {
+    position: relative;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    min-width: 240px; max-width: 340px;
+    color: #1f2937; font: 13px/1.5 system-ui, Arial, sans-serif;
+  }
+  .eco-balloon__header {
+    display:flex; justify-content:space-between; align-items:center;
+    gap:8px; padding:10px 12px 6px; border-bottom:1px solid #eef2f3;
+  }
+  .eco-balloon__title { font-weight:600; font-size:15px; }
+  .eco-balloon__close {
+    border:0; background:transparent; font-size:18px; line-height:1;
+    cursor:pointer; opacity:.55; padding:0;
+  }
+  .eco-balloon__close:hover { opacity:.9; }
+  .eco-balloon__body { padding: 8px 12px 12px; }
+  .eco-balloon__tail {
+    position:absolute; left:50%; transform:translateX(-50%) rotate(45deg);
+    width:18px; height:18px; background:#fff; bottom:-9px;
+    border-left:1px solid rgba(0,0,0,.08); border-bottom:1px solid rgba(0,0,0,.08);
+  }
+    
+  .eco-balloon,
+  .eco-balloon__header,
+  .eco-balloon__body,
+  .eco-balloon__title {
+  white-space: normal;         /* разрешаем переносы */
+  overflow-wrap: anywhere;     /* переносим длинные слова/URL где угодно */
+  word-break: break-word;      /* страховка для очень длинных токенов */
+  hyphens: auto;               /* перенос по слогам (нужен lang=ru) */
+  }
+
+  .eco-balloon {                 /* чуть безопаснее по ширине */
+  box-sizing: border-box;
+  max-width: 340px;
+  width: min(340px, calc(100vw - 32px));
+  }`;
+  const style = document.createElement('style');
+  style.id = 'eco-balloon-styles';
+  style.textContent = css;
+  document.head.appendChild(style);
+}
+
 const FILTER_TYPE_BY_ID = {
   0: 'air',
   1: 'radiation',
@@ -50,15 +100,26 @@ const adaptAirPoints = makePointsAdaptor({
   getLonLat: (p) => [p.CoordinatesResponseDto.lon, p.CoordinatesResponseDto.lat],
   toProps: (p) => ({
     hintContent: `${p.pointName} • AQI: ${p.europeanAqi}`,
-    balloonContent: `
-      <div style="font-size:13px; line-height:1.5; padding:8px; background:#f9f9f9; border-radius:6px;">
-        <b style="font-size:14px; color:#2c3e50;">${p.pointName}</b><br/>
+    balloonTitle: p.pointName ?? 'Качество воздуха',
+    balloonBody: `
+      <div style="font-size:13px; line-height:1.5">
         <div>PM2.5: <b>${p.pm25}</b></div>
         <div>PM10: <b>${p.pm10}</b></div>
         <div>NO₂: <b>${p.nitrogenDioxide}</b></div>
         <div>SO₂: <b>${p.sulphurDioxide}</b></div>
         <div>O₃: <b>${p.ozone}</b></div>
-        <div>CO₂: <b>${p.carbonDioxide}</b></div>
+        <div>AQI (EU): <b>${p.europeanAqi}</b></div>
+      </div>
+    `,
+    // fallback для старого кода:
+    balloonContent: `
+      <div style="font-size:13px; line-height:1.5">
+        <div>PM2.5: <b>${p.pm25}</b></div>
+        <div>PM10: <b>${p.pm10}</b></div>
+        <div>NO₂: <b>${p.nitrogenDioxide}</b></div>
+        <div>SO₂: <b>${p.sulphurDioxide}</b></div>
+        <div>O₃: <b>${p.ozone}</b></div>
+        <div>AQI (EU): <b>${p.europeanAqi}</b></div>
       </div>
     `,
   }),
@@ -126,9 +187,14 @@ const adaptRadiationPoints = makePointsAdaptor({
   getLonLat: (p) => [p.coordinatesResponseDto.lat, p.coordinatesResponseDto.lon],
   toProps: (p) => ({
     hintContent: `${p.pointName} • β: ${p.betaFallout}`,
+    balloonTitle: p.pointName ?? 'Радиация',
+    balloonBody: `
+      <div style="font-size:13px; line-height:1.5">
+        <div>Бета-выпадение: <b>${p.betaFallout}</b></div>
+      </div>
+    `,
     balloonContent: `
-      <div style="font-size:13px; line-height:1.5; padding:8px; background:#fff7f7; border:1px solid #f1c0c0; border-radius:6px;">
-        <b style="font-size:14px; color:#8e1e1e;">${p.pointName}</b><br/>
+      <div style="font-size:13px; line-height:1.5">
         <div>Бета-выпадение: <b>${p.betaFallout}</b></div>
       </div>
     `,
@@ -141,9 +207,18 @@ const adaptCleanupEventsPoints = makePointsAdaptor({
   getLonLat: (p) => [p.coordinatesResponseDto.lon, p.coordinatesResponseDto.lat],
   toProps: (p) => ({
     hintContent: `${p.cityName ?? 'Инициатива'} • ${formatDate(p.date)}`,
+    balloonTitle: p.cityName ?? 'Инициатива',
+    balloonBody: `
+      <div style="font-size:13px; line-height:1.5">
+        ${p.location ? `<div>Место: <b>${p.location}</b></div>` : ''}
+        ${p.organizer ? `<div>Организатор: <b>${p.organizer}</b></div>` : ''}
+        ${p.description ? `<div>Описание: <b>${p.description}</b></div>` : ''}
+        ${p.participantsExpected ? `<div>Требуемое кол-во участников: <b>${p.participantsExpected}</b></div>` : ''}
+        <div>Дата: <b>${formatDate(p.date)}</b></div>
+      </div>
+    `,
     balloonContent: `
-      <div style="font-size:13px; line-height:1.5; padding:8px; background:#f0f9f0; border:1px solid #c2e0c2; border-radius:6px;">
-        <b style="font-size:14px; color:#2d6a2d;">${p.cityName ?? 'Инициатива'}</b><br/>
+      <div style="font-size:13px; line-height:1.5">
         ${p.location ? `<div>Место: <b>${p.location}</b></div>` : ''}
         ${p.organizer ? `<div>Организатор: <b>${p.organizer}</b></div>` : ''}
         ${p.description ? `<div>Описание: <b>${p.description}</b></div>` : ''}
@@ -238,8 +313,12 @@ function toFeatureCollection(points) {
     features: points.map((p) => ({
       type: 'Feature',
       id: p.id,
-      geometry: { type: 'Point', coordinates: p.coords }, // [lon, lat]
-      properties: p.props,
+      geometry: { type: 'Point', coordinates: p.coords },
+      properties: {
+        ...p.props,
+        // если в адаптере забыли balloonBody — возьмём из balloonContent
+        balloonBody: p.props.balloonBody ?? p.props.balloonContent,
+      },
     })),
   };
 }
@@ -275,6 +354,87 @@ function MapComponent() {
   const regionCollectionRef = useRef(null);
   const regionDetailsAbortRef = useRef(null); // для деталей региона
   //const waterLayerRef = useRef(null); // хранит geoQuery результата для воды
+
+  /* ========================= Балуны (стили) ========================= */
+
+  const [balloonLayouts, setBalloonLayouts] = useState(null);
+
+  // === INSERT: инициализируем CSS и макеты, когда карта готова ===
+  useEffect(() => {
+    if (!mapReady || !window.ymaps) return;
+    ensureEcoBalloonStyles();
+
+    const ymaps = window.ymaps;
+
+    // Контентный макет: просто рендерит properties.balloonBody (или старый balloonContent)
+    const EcoBalloonContentLayout = ymaps.templateLayoutFactory.createClass(
+      '$[properties.balloonBody|raw]',
+    );
+
+    // Внешний макет: заголовок с безопасным default
+    const EcoBalloonLayout = ymaps.templateLayoutFactory.createClass(
+      `
+    <div class="eco-balloon">
+      <div class="eco-balloon__header">
+        <div class="eco-balloon__title">{{ properties.balloonTitle|default:"Информация" }}</div>
+        <button class="eco-balloon__close" aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="eco-balloon__body">
+        $[[options.contentLayout observeSize minWidth=220 maxWidth=360]]
+      </div>
+      <div class="eco-balloon__tail"></div>
+    </div>
+  `,
+      {
+        build: function () {
+          EcoBalloonLayout.superclass.build.call(this);
+          this._el = this.getParentElement().querySelector('.eco-balloon');
+          this._onClose = (e) => {
+            e.preventDefault();
+            this.events.fire('userclose');
+          };
+          this._el.querySelector('.eco-balloon__close').addEventListener('click', this._onClose);
+          this._applyOffset();
+        },
+        clear: function () {
+          if (this._el) {
+            const btn = this._el.querySelector('.eco-balloon__close');
+            btn && btn.removeEventListener('click', this._onClose);
+          }
+          EcoBalloonLayout.superclass.clear.call(this);
+        },
+        onSublayoutSizeChange: function () {
+          EcoBalloonLayout.superclass.onSublayoutSizeChange.apply(this, arguments);
+          if (this._el) {
+            this._applyOffset();
+            this.events.fire('shapechange');
+          }
+        },
+        _applyOffset: function () {
+          const el = this._el;
+          if (!el) return;
+          el.style.left = -el.offsetWidth / 2 + 'px';
+          el.style.top = -el.offsetHeight - 10 + 'px';
+        },
+        getShape: function () {
+          if (!this._el) return null;
+          const el = this._el;
+          const left = parseFloat(el.style.left),
+            top = parseFloat(el.style.top);
+          const w = el.offsetWidth,
+            h = el.offsetHeight + 10;
+          return new ymaps.shape.Rectangle(
+            new ymaps.geometry.pixel.Rectangle([
+              [left, top],
+              [left + w, top + h],
+            ]),
+          );
+        },
+      },
+    );
+
+    setBalloonLayouts({ layout: EcoBalloonLayout, content: EcoBalloonContentLayout });
+  }, [mapReady]);
 
   /* ========================= Профиль пользователя (для админа) ========================= */
   useEffect(() => {
@@ -939,6 +1099,12 @@ function MapComponent() {
               objects={{
                 preset: 'islands#blueCircleDotIcon',
                 openBalloonOnClick: true,
+                // === INSERT: кастомные макеты балуна
+                balloonLayout: balloonLayouts?.layout,
+                balloonContentLayout: balloonLayouts?.content,
+                balloonCloseButton: false, // свой крестик
+                balloonPanelMaxMapArea: 0, // не превращать в «панель»
+                balloonMaxWidth: 360,
               }}
               clusters={{
                 preset: 'islands#invertedBlueClusterIcons',
