@@ -277,10 +277,16 @@ export default function RegionInfoModal({
             <div className="rim-section">
               <h4>Почва</h4>
               <div>
-                Хрон. загрязнение: {region?.soilData?.chronicSoilPollutionPercent || 'Нет данных'}
+                Хрон. загрязнение:{' '}
+                {region?.soilData?.chronicSoilPollutionPercent > 0
+                  ? `${region.soilData.chronicSoilPollutionPercent}%`
+                  : 'Нет данных'}
               </div>
               <div>
-                Индекс LDN: {region?.soilData?.landDegradationNeutralityIndex || 'Нет данных'}
+                Индекс LDN:{' '}
+                {region?.soilData?.landDegradationNeutralityIndex > 0
+                  ? `${region.soilData.landDegradationNeutralityIndex}%`
+                  : 'Нет данных'}
               </div>
             </div>
 
@@ -288,7 +294,9 @@ export default function RegionInfoModal({
               <h4>Вода</h4>
               <div>
                 Грязные поверхностные воды:{' '}
-                {region?.waterData?.dirtySurfaceWaterPercent || 'Нет данных'}
+                {region?.waterData?.dirtySurfaceWaterPercent > 0
+                  ? `${region.waterData.dirtySurfaceWaterPercent}%`
+                  : 'Нет данных'}
               </div>
             </div>
 
@@ -333,7 +341,7 @@ export default function RegionInfoModal({
                 onClick={() => setHistoryOpen((v) => !v)}
                 className="rim-air-history-btn"
               >
-                График качества воздуха
+                График загрязнения воздуха
               </button>
               {historyOpen && (
                 <div className="rim-air-history">
@@ -358,7 +366,17 @@ export default function RegionInfoModal({
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="date" />
                           <YAxis />
-                          <Tooltip />
+                          <XAxis dataKey="date" />
+
+                          <YAxis
+                            allowDecimals={false}
+                            tickFormatter={(v) => Number(v).toFixed(0)} // округлит подписи оси Y
+                          />
+
+                          <Tooltip
+                            // округлит значение aqi в подсказке
+                            formatter={(v) => (Number.isFinite(v) ? Number(v).toFixed(0) : '—')}
+                          />
                           <Line type="monotone" dataKey="aqi" stroke="#3b82f6" dot />
                         </LineChart>
                       </ResponsiveContainer>

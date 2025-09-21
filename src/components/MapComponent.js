@@ -31,7 +31,7 @@ function ensureEcoBalloonStyles() {
     border: 1px solid rgba(0,0,0,.08);
     border-radius: 12px;
     box-shadow: 0 10px 24px rgba(0,0,0,.18);
-    min-width: 240px; max-width: 340px;
+    min-width: 240px; max-width: 370px;
     color: #1f2937; font: 13px/1.5 system-ui, Arial, sans-serif;
   }
   .eco-balloon__header {
@@ -63,8 +63,8 @@ function ensureEcoBalloonStyles() {
 
   .eco-balloon {                 /* чуть безопаснее по ширине */
   box-sizing: border-box;
-  max-width: 340px;
-  width: min(340px, calc(100vw - 32px));
+  max-width: 370px;
+  width: min(370px, calc(100vw - 32px));
   }`;
   const style = document.createElement('style');
   style.id = 'eco-balloon-styles';
@@ -103,12 +103,12 @@ const adaptAirPoints = makePointsAdaptor({
     balloonTitle: p.pointName ?? 'Качество воздуха',
     balloonBody: `
       <div style="font-size:13px; line-height:1.5">
-        <div>PM2.5: <b>${p.pm25}</b></div>
-        <div>PM10: <b>${p.pm10}</b></div>
-        <div>NO₂: <b>${p.nitrogenDioxide}</b></div>
-        <div>SO₂: <b>${p.sulphurDioxide}</b></div>
-        <div>O₃: <b>${p.ozone}</b></div>
-        <div>AQI (EU): <b>${p.europeanAqi}</b></div>
+        <div>Твёрдые частицы (PM2.5): <b>${p.pm25}</b> µg/m³</div>
+        <div>Твёрдые частицы (PM10): <b>${p.pm10}</b> µg/m³</div>
+        <div>Диоксид азота (NO₂): <b>${p.nitrogenDioxide}</b> µg/m³</div>
+        <div>Диоксид серы (SO₂): <b>${p.sulphurDioxide}</b> µg/m³</div>
+        <div>Озон (O₃): <b>${p.ozone}</b> µg/m³</div>
+        <div>Индекс качества воздуха AQI (EU): <b>${p.europeanAqi}</b></div>
       </div>
     `,
     // fallback для старого кода:
@@ -190,7 +190,7 @@ const adaptRadiationPoints = makePointsAdaptor({
     balloonTitle: p.pointName ?? 'Радиация',
     balloonBody: `
       <div style="font-size:13px; line-height:1.5">
-        <div>Бета-выпадение: <b>${p.betaFallout}</b></div>
+        <div>Бета-выпадение: <b>${p.betaFallout}</b> Бк/м²·сутки</div>
       </div>
     `,
     balloonContent: `
@@ -380,7 +380,7 @@ function MapComponent() {
         <button class="eco-balloon__close" aria-label="Закрыть">&times;</button>
       </div>
       <div class="eco-balloon__body">
-        $[[options.contentLayout observeSize minWidth=220 maxWidth=360]]
+        $[[options.contentLayout observeSize minWidth=220 maxWidth=370]]
       </div>
       <div class="eco-balloon__tail"></div>
     </div>
@@ -1104,7 +1104,7 @@ function MapComponent() {
                 balloonContentLayout: balloonLayouts?.content,
                 balloonCloseButton: false, // свой крестик
                 balloonPanelMaxMapArea: 0, // не превращать в «панель»
-                balloonMaxWidth: 360,
+                balloonMaxWidth: 370,
               }}
               clusters={{
                 preset: 'islands#invertedBlueClusterIcons',
