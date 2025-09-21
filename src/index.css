@@ -231,6 +231,11 @@ box-sizing: border-box;
 }
 .rim-header h3 { font-size: 1.5rem; font-weight: 700; }
 
+.rim-badge{
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
 .rim-close { border: 0; background: transparent; cursor: pointer; font-size: 22px; }
 .rim-body { padding: 16px 20px; max-height: 70vh; overflow: auto; }
 .rim-section { margin-bottom: 14px; }
@@ -643,7 +648,7 @@ box-sizing: border-box;
   position: fixed;
   right: 23px;
   top: 1em;
-  height: 36em;
+  height: 34em;
   z-index: 10;
 }
 

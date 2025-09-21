@@ -270,7 +270,7 @@ export default function RegionInfoModal({
             )}
             {isFavorite && (
               <div className="rim-badge" aria-label="Регион уже в избранном">
-                ✓ В избранном
+                Добавлено в избранное ✓
               </div>
             )}
 
