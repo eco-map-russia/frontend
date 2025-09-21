@@ -5,7 +5,7 @@ import { ObjectManager } from '@pbe/react-yandex-maps';
 import config from '../config/config.json';
 
 import { http } from '../api/http';
-// import { fetchRegions } from '../store/regions-slice'; // импорт thunk
+import { fetchRegions } from '../store/regions-slice'; // импорт thunk
 import { selectActiveFilter } from '../store/filter-slice';
 import { fetchProfile, selectIsAdmin, selectProfile } from '../store/user-profile-slice';
 import {
@@ -33,101 +33,40 @@ function ensureEcoBalloonStyles() {
     box-shadow: 0 10px 24px rgba(0,0,0,.18);
     min-width: 240px; max-width: 370px;
     color: #1f2937; font: 13px/1.5 system-ui, Arial, sans-serif;
-    box-sizing: border-box;
-    width: min(370px, calc(100vw - 32px));
   }
-
-  .eco-balloon__header{
+  .eco-balloon__header {
     display:flex; justify-content:space-between; align-items:center;
     gap:8px; padding:10px 12px 6px; border-bottom:1px solid #eef2f3;
   }
-  /* важно: иначе flex-дочерние элементы не «сжимаются» и дают переполнение */
-  .eco-balloon__header > * { min-width: 0; }
-
   .eco-balloon__title { font-weight:600; font-size:15px; }
-
-  .eco-balloon__close{
+  .eco-balloon__close {
     border:0; background:transparent; font-size:18px; line-height:1;
     cursor:pointer; opacity:.55; padding:0;
   }
-  .eco-balloon__close:hover{ opacity:.9; }
-
-  .eco-balloon__body{
-    padding:8px 12px 12px;
-    /* переносы внутри контента */
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    hyphens: auto;
-  }
-
-  .eco-balloon__tail{
+  .eco-balloon__close:hover { opacity:.9; }
+  .eco-balloon__body { padding: 8px 12px 12px; }
+  .eco-balloon__tail {
     position:absolute; left:50%; transform:translateX(-50%) rotate(45deg);
     width:18px; height:18px; background:#fff; bottom:-9px;
     border-left:1px solid rgba(0,0,0,.08); border-bottom:1px solid rgba(0,0,0,.08);
   }
-
-  /* ⚠️ У Яндекс-обёртки часто стоит white-space: nowrap — снимаем его */
-  .ymaps-2-1-79-balloon__content,
-  .ymaps-2-1-79-balloon__content > ymaps,
-  .ymaps-2-1-79-balloon-content__body {
-    white-space: normal !important;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    
+  .eco-balloon,
+  .eco-balloon__header,
+  .eco-balloon__body,
+  .eco-balloon__title {
+  white-space: normal;         /* разрешаем переносы */
+  overflow-wrap: anywhere;     /* переносим длинные слова/URL где угодно */
+  word-break: break-word;      /* страховка для очень длинных токенов */
+  hyphens: auto;               /* перенос по слогам (нужен lang=ru) */
   }
 
-  .eco-balloon__content { display:block; max-width:100%; }
-.ymaps-2-1-79-balloon__content { max-width:100% !important; }
-
-.eco-balloon { max-width:370px; width:min(370px, calc(100vw - 32px)); box-sizing:border-box; overflow:visible; }
-.eco-balloon__body, .eco-balloon__content { white-space:normal !important; overflow-wrap:anywhere; word-break:break-word; hyphens:auto; }
-
-.map-container .ymaps-2-1-79-balloon__content,
-.map-container .ymaps-2-1-79-balloon__content > ymaps,
-.map-container .ymaps-2-1-79-balloon__content > ymaps > div {
-  white-space:normal !important;
-  overflow-wrap:anywhere !important;
-  word-break:break-word !important;
-  max-width:100% !important;
-}
-
-.eco-balloon{
-  max-width:370px;
-  width:min(370px, calc(100vw - 32px));
-  box-sizing:border-box;
-  overflow:visible; /* важно: не обрезаем содержимое */
-  text-wrap: break-word; /* переносы по словам */
-}
-
-/* Контент и все его потомки — разрешаем переносы */
-.eco-balloon__body,
-.eco-balloon__content,
-.eco-balloon__content *{
-  white-space: normal !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-  text-overflow: unset !important;
-}
-
-/* Снимаем «nowrap/ellipsis» у внутренних YMaps-обёрток */
-.map-container .ymaps-2-1-79-balloon__content,
-.map-container .ymaps-2-1-79-balloon__content *,
-.map-container .ymaps-2-1-79-balloon-content__body,
-.map-container .ymaps-2-1-79-balloon-content__body *{
-  white-space: normal !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-  text-overflow: unset !important;
-  max-width: 100% !important;
-}
-`;
-  let style = document.getElementById('eco-balloon-styles');
-  if (style) {
-    // ← обновляем существующий
-    style.textContent = css;
-    return;
-  }
-  style = document.createElement('style');
+  .eco-balloon {                 /* чуть безопаснее по ширине */
+  box-sizing: border-box;
+  max-width: 370px;
+  width: min(370px, calc(100vw - 32px));
+  }`;
+  const style = document.createElement('style');
   style.id = 'eco-balloon-styles';
   style.textContent = css;
   document.head.appendChild(style);
@@ -401,7 +340,7 @@ function MapComponent() {
   const [isFavOpen, setFavOpen] = useState(false); // для модалки избранных регионов
 
   const dispatch = useDispatch();
-  const { items: regions } = useSelector((s) => s.regions);
+  const { items: regions, status, error } = useSelector((s) => s.regions);
   const activeFilter = useSelector(selectActiveFilter);
   const { isLoggedIn } = useSelector((s) => s.auth); // чтобы не дергать до логина
   const { status: profileStatus } = useSelector(selectProfile);
@@ -429,7 +368,7 @@ function MapComponent() {
 
     // Контентный макет: просто рендерит properties.balloonBody (или старый balloonContent)
     const EcoBalloonContentLayout = ymaps.templateLayoutFactory.createClass(
-      '<div class="eco-balloon__content">$[properties.balloonBody|raw]</div>',
+      '$[properties.balloonBody|raw]',
     );
 
     // Внешний макет: заголовок с безопасным default
@@ -441,7 +380,7 @@ function MapComponent() {
         <button class="eco-balloon__close" aria-label="Закрыть">&times;</button>
       </div>
       <div class="eco-balloon__body">
-        $[[options.contentLayout observeSize minWidth=240 maxWidth=370]]
+        $[[options.contentLayout observeSize minWidth=220 maxWidth=370]]
       </div>
       <div class="eco-balloon__tail"></div>
     </div>
@@ -667,23 +606,23 @@ function MapComponent() {
 
   /* ========================= Координаты с Бэка ========================= */
 
-  // // 1) грузим регионы один раз при заходе (и когда пользователь авторизовался)
-  // useEffect(() => {
-  //   if (isLoggedIn && status === 'idle') {
-  //     dispatch(fetchRegions());
-  //   }
-  // }, [dispatch, isLoggedIn, status]);
+  // 1) грузим регионы один раз при заходе (и когда пользователь авторизовался)
+  useEffect(() => {
+    if (isLoggedIn && status === 'idle') {
+      dispatch(fetchRegions());
+    }
+  }, [dispatch, isLoggedIn, status]);
 
-  // // 2) просто выведем массив в консоль, когда он загрузится
-  // useEffect(() => {
-  //   if (status === 'succeeded') {
-  //     console.log('Регионы получены:', regions);
-  //     // если в слайсе парсишь geoJson -> regions[i].geometry будет уже объектом
-  //   }
-  //   if (status === 'failed') {
-  //     console.warn('Ошибка загрузки регионов:', error);
-  //   }
-  // }, [status, regions, error]);
+  // 2) просто выведем массив в консоль, когда он загрузится
+  useEffect(() => {
+    if (status === 'succeeded') {
+      console.log('Регионы получены:', regions);
+      // если в слайсе парсишь geoJson -> regions[i].geometry будет уже объектом
+    }
+    if (status === 'failed') {
+      console.warn('Ошибка загрузки регионов:', error);
+    }
+  }, [status, regions, error]);
 
   /* ========================= Выбранный фильтр ========================= */
   // Логируем изменение фильтра именно в MapComponent
