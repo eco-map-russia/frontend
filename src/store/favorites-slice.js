@@ -85,12 +85,16 @@ const favoritesSlice = createSlice({
     },
 
     addFavoriteRegionLocal(state, action) {
-      const r = action.payload; // {id, name, coordinatesResponseDto:{lat,lon}}
+      const r = action.payload; // { id, ... }
       if (!state.items.some((x) => x.id === r.id)) {
         state.items.unshift(r);
         state.totalElements += 1;
         state.numberOfElements += 1;
         state.empty = state.items.length === 0;
+      }
+      // 🔑 СИНХРОНИЗИРУЕМ ИНДЕКС
+      if (r?.id != null) {
+        state.ids[String(r.id)] = true;
       }
     },
     removeFavoriteRegionLocal(state, action) {
@@ -102,6 +106,10 @@ const favoritesSlice = createSlice({
         state.totalElements = Math.max(0, state.totalElements - diff);
         state.numberOfElements = Math.max(0, state.numberOfElements - diff);
         state.empty = state.items.length === 0;
+      }
+      // 🔑 СИНХРОНИЗИРУЕМ ИНДЕКС
+      if (id != null) {
+        delete state.ids[String(id)];
       }
     },
     resetFavoritesState() {
